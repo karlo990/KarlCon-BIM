@@ -1936,11 +1936,15 @@ function initThree(){
     e.preventDefault();
     // Local camera zoom (orbit radius) — gesturecast view only
     window._gRadius = Math.max(8, Math.min(80, window._gRadius + e.deltaY*0.05));
-    // ZOOM SYNC FIX: also drive _objScale so it broadcasts via obj_transform → Pepper's Ghost
-    // Normalise deltaY: pixel mode (~3/tick) vs line mode (~100/tick)
+    // ZOOM SYNC: drive _objScale via physics impulse (broadcasts via obj_transform)
     const dS = -(e.deltaY / (e.deltaMode === 0 ? 1000 : 10));
     window._objDScale = (window._objDScale || 0) + dS;
+    window._objScale  = Math.max(0.25, Math.min(4.0, (window._objScale || 1.0) + dS));
     window._lastInteractMs = performance.now();
+    // ALSO send a direct zoom message immediately — no physics lag, no 50ms throttle
+    if (WS && WS.readyState === 1) {
+      try { WS.send(JSON.stringify({ type: 'zoom', scale: +window._objScale.toFixed(4) })); } catch(e) {}
+    }
   }, { passive: false });
 
   // ── OBJECT PHYSICS STATE (v10 gesture-object routing) ────────────────
@@ -2010,7 +2014,8 @@ function animate(){
     document.getElementById('b-z').textContent = p.z.toFixed(1);
     // GestureCast: broadcast when gesture engine active
     if (GE && GE.running) broadcastTransform(θ, φ, R);
-    broadcastObjTransform();
+    // NOTE: broadcastObjTransform() moved to AFTER physics integration below
+    // so it sends the current frame's _objScale, not last frame's value.
   }
 
   // ── OBJECT PHYSICS INTEGRATION (v10) ─────────────────────────────────
@@ -2050,6 +2055,8 @@ function animate(){
     const s = window._objScale;
     bimGroup.scale.set(s, s, s);
   }
+  // Broadcast AFTER physics integration so scale is current-frame value
+  broadcastObjTransform();
 
   // Hologram pulse / glitch
   if(bimGroup && layers.holo){
