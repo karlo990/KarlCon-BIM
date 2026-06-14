@@ -204,7 +204,8 @@ body::before{
 /* Restore interactivity for all UI controls inside the pointer-events:none layout */
 #layout button, #layout input, #layout select, #layout label,
 #layout a, #layout [onclick], #layout .side-panel, #layout .btn,
-#layout .btn-xs, #layout input[type=range] {
+#layout .btn-xs, #layout input[type=range],
+#viewport, #canvas-main {
   pointer-events: auto;
 }
 
@@ -1912,13 +1913,16 @@ function initThree(){
   window._gPhi    = 0.9;
   window._gRadius = 30;
 
+  window._lastInteractMs = 0; // timestamp of last user drag/gesture input
+
   cv.addEventListener('mousedown', e=>{ isDrag=true; lastX=e.clientX; lastY=e.clientY; e.preventDefault(); });
-  window.addEventListener('mouseup', ()=>isDrag=false);
+  window.addEventListener('mouseup', ()=>{ isDrag=false; window._lastInteractMs = performance.now(); });
   window.addEventListener('mousemove', e=>{
     if(!isDrag) return;
     const dxM = e.clientX - lastX;
     const dyM = e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
+    window._lastInteractMs = performance.now();
     // Mouse drives the object rotation (same globals gesture engine uses)
     window._objOmegaY += dxM * 0.004;
     window._objOmegaX += dyM * 0.004;
@@ -2006,15 +2010,17 @@ function animate(){
   // Exponential angular damping: ω(t+1) = ω(t) · β
   // β = 0.96 → half-life ≈ 17 frames ≈ 0.28 s at 60 fps.
   // Ref: Goldstein CM §4.9 (2002), Stokes rotational drag analogy.
-  // Idle auto-rotation: inject constant Y spin when no user/gesture driving
+  // Idle auto-rotation: inject constant Y spin only when user hasn't interacted recently
   const IDLE_OMEGA = 0.004; // ~14°/s at 60fps
+  const idleCooldown = (performance.now() - (window._lastInteractMs || 0)) > 2000;
+
   if (!window._objStopped) {
     const β = 0.96;
     window._objOmegaY *= β;
     window._objOmegaX *= β;
     window._objDScale  *= β;
-    // Re-floor to idle if damped below threshold and X is settled
-    if (Math.abs(window._objOmegaY) < IDLE_OMEGA && Math.abs(window._objOmegaX) < 0.001) {
+    // Re-floor to idle only after cooldown and when fully settled
+    if (idleCooldown && Math.abs(window._objOmegaY) < IDLE_OMEGA && Math.abs(window._objOmegaX) < 0.001) {
       window._objOmegaY = IDLE_OMEGA;
     }
   } else {
@@ -4591,6 +4597,7 @@ function applyWipeCamera(dir) {   // keep old name so call-site at line ~3930 is
 
   // Clear stop flag — a new wipe overrides thumb_up stop
   window._objStopped = false;
+  window._lastInteractMs = performance.now();
 
   switch (dir) {
     case 'WIPE_LEFT':
