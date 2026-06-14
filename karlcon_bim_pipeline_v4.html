@@ -1,0 +1,4113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<!-- KarlCON: runtime REST base — resolves to /pipeline on HF Space, localhost:8767 locally -->
+<script>
+(function(){
+  var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  // When served from HF Space /hologram, app.py injects _KARLCON_HF_BASE via WS patch script.
+  // When opened standalone (Vercel/local), fall back to same-origin /pipeline or localhost.
+  window.PIPELINE_BASE = isLocal
+    ? window.PIPELINE_BASE
+    : (location.origin + '/pipeline');
+  // WebSocket: same-origin /ws-pipe on HF, localhost on local
+  window.PIPELINE_WS = isLocal
+    ? window.PIPELINE_WS
+    : (location.origin.replace(/^http/, 'ws') + '/ws-pipe');
+  console.info('[KarlCON] PIPELINE_BASE =', window.PIPELINE_BASE);
+  console.info('[KarlCON] PIPELINE_WS   =', window.PIPELINE_WS);
+})();
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KarlCON BIM Pipeline</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg0: #0d0f12;
+  --bg1: #141618;
+  --bg2: #1c1f24;
+  --bg3: #23272e;
+  --bg4: #2a2f38;
+  --border: #2e3340;
+  --border2: #3a3f4d;
+  --text1: #e8eaf0;
+  --text2: #9ba3b5;
+  --text3: #5c6478;
+  --accent: #3b82f6;
+  --accent2: #1d4ed8;
+  --gold: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --cyan: #06b6d4;
+  --orange: #f97316;
+
+  /* Stage pipeline colors */
+  --s1: #3b82f6;   /* Sketch – blue */
+  --s2: #10b981;   /* Elevations – green */
+  --s3: #f59e0b;   /* Blueprint – amber */
+  --s4: #8b5cf6;   /* Parser / BIM – purple */
+
+  --font-mono: 'Courier New', Courier, monospace;
+  --font-ui: system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg0);
+  color: var(--text1);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ─── TITLEBAR ────────────────────────────────────────────── */
+#titlebar {
+  height: 32px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
+  position: relative;
+}
+.title-brand {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.title-pipe { color: var(--border2); margin: 0 2px; }
+.title-doc { font-size: 11px; color: var(--text2); }
+.title-version {
+  font-size: 9px;
+  color: var(--text3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.title-winbtns {
+  margin-left: auto;
+  display: flex;
+  gap: 1px;
+}
+.title-wbtn {
+  width: 20px; height: 18px;
+  background: var(--bg3);
+  border: none;
+  color: var(--text3);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.title-wbtn:hover { background: var(--red); color: #fff; }
+
+/* ─── PIPELINE NAVIGATOR ──────────────────────────────────── */
+#pipeline-nav {
+  height: 44px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  padding: 0 12px;
+  gap: 0;
+}
+.pnav-stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  transition: color .15s, border-color .15s;
+  position: relative;
+  white-space: nowrap;
+}
+.pnav-stage:hover { color: var(--text2); }
+.pnav-stage.active { color: var(--text1); }
+.pnav-stage.active[data-stage="1"] { border-color: var(--s1); }
+.pnav-stage.active[data-stage="2"] { border-color: var(--s2); }
+.pnav-stage.active[data-stage="3"] { border-color: var(--s3); }
+.pnav-stage.active[data-stage="4"] { border-color: var(--s4); }
+
+.pnav-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.pnav-stage.active[data-stage="1"] .pnav-num { background: var(--s1); border-color: var(--s1); color: #fff; }
+.pnav-stage.active[data-stage="2"] .pnav-num { background: var(--s2); border-color: var(--s2); color: #fff; }
+.pnav-stage.active[data-stage="3"] .pnav-num { background: var(--s3); border-color: var(--s3); color: #000; }
+.pnav-stage.active[data-stage="4"] .pnav-num { background: var(--s4); border-color: var(--s4); color: #fff; }
+
+.pnav-stage.done .pnav-num { background: var(--green); border-color: var(--green); color: #fff; }
+.pnav-stage.done { color: var(--green); }
+
+.pnav-label { font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.pnav-sub { font-size: 9px; color: var(--text3); }
+.pnav-arrow {
+  color: var(--border2);
+  font-size: 10px;
+  padding: 0 4px;
+  align-self: center;
+}
+
+.pnav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pnav-btn {
+  padding: 5px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+.btn-ghost:hover { background: var(--bg4); color: var(--text1); }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success:hover { filter: brightness(1.1); }
+.btn-purple { background: var(--purple); color: #fff; }
+.btn-purple:hover { filter: brightness(1.1); }
+
+/* ─── MAIN BODY ───────────────────────────────────────────── */
+#stage-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.stage-panel {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+}
+.stage-panel.visible { display: flex; }
+
+/* ─── STAGE 1: SKETCH ─────────────────────────────────────── */
+#stage-1 {
+  flex-direction: row;
+}
+#s1-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-section {
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section-title {
+  padding: 6px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  background: var(--bg1);
+}
+.tool-list {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text2);
+  border: 1px solid transparent;
+}
+.tool-btn:hover { background: var(--bg3); color: var(--text1); }
+.tool-btn.active { background: #1a2a4a; border-color: var(--s1); color: var(--s1); }
+.tool-btn .ti {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.tool-btn-label { font-size: 10px; font-weight: 500; }
+.tool-btn-shortcut {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--text3);
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  padding: 0 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.props-grid {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+.prop-key { font-size: 9px; color: var(--text3); }
+.prop-val { font-size: 9px; color: var(--text1); font-weight: 600; font-family: var(--font-mono); }
+
+#s1-canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+#s1-toolbar {
+  height: 34px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.tb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.tb-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+}
+.tb-btn:hover { background: var(--bg3); color: var(--text1); }
+.tb-btn i { font-size: 12px; }
+
+.canvas-frame {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #15181e;
+}
+canvas.draw-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+.canvas-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-size: 9px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  pointer-events: none;
+  letter-spacing: .04em;
+}
+.canvas-overlay-tr {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 9px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+/* ─── STAGE 2: 3D GeoGebra Viewer ─────────────────────────── */
+#stage-2 {
+  flex-direction: column;
+}
+#s2-top {
+  height: 40px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.s2-view-btn {
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .12s;
+}
+.s2-view-btn.active {
+  background: rgba(16,185,129,.15);
+  border-color: var(--s2);
+  color: var(--s2);
+}
+.s2-view-btn:hover { background: var(--bg4); color: var(--text1); }
+
+/* Main 3D viewer body */
+#s2-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background: var(--bg0);
+}
+
+/* GeoGebra panel */
+#s2-ggb-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+#ggb-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #13161b;
+}
+#ggb-container iframe,
+#ggb-container .ggb-applet-wrapper {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+/* Fallback canvas 3D (oblique projection) when GeoGebra not reachable */
+#s2-fallback-canvas {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: #13161b;
+}
+
+/* Right info panel */
+#s2-info-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.s2-info-section {
+  border-bottom: 1px solid var(--border);
+}
+.s2-info-title {
+  padding: 7px 10px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  background: var(--bg1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.s2-info-title i { font-size: 11px; color: var(--s2); }
+.s2-info-body { padding: 8px 10px; }
+.s2-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.s2-key { font-size: 9px; color: var(--text3); }
+.s2-val { font-size: 9px; color: var(--text1); font-weight: 600; font-family: var(--font-mono); }
+
+/* Projection formula display */
+#s2-math-block {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.7;
+  color: var(--text2);
+  background: var(--bg1);
+}
+#s2-math-block::-webkit-scrollbar { width: 3px; }
+#s2-math-block::-webkit-scrollbar-thumb { background: var(--border2); }
+.math-heading {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--s2);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin: 10px 0 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.math-formula {
+  color: #a5f3c8;
+  font-size: 9.5px;
+  padding: 1px 4px;
+  background: rgba(16,185,129,.07);
+  border-left: 2px solid rgba(16,185,129,.4);
+  margin: 2px 0;
+  white-space: pre;
+}
+.math-comment { color: var(--text3); font-size: 8.5px; }
+
+/* Loading overlay for GeoGebra */
+#s2-ggb-loading {
+  position: absolute;
+  inset: 0;
+  background: #13161b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: none;
+}
+.ggb-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--s2);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#s2-ggb-loading p {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: .05em;
+}
+
+/* Axis indicator overlay */
+#s2-axis-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(13,15,18,.85);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text3);
+  pointer-events: none;
+  line-height: 1.5;
+  z-index: 5;
+}
+#s2-axis-badge span.ax { font-weight: 700; }
+#s2-axis-badge span.ax-x { color: #ef4444; }
+#s2-axis-badge span.ax-y { color: #22c55e; }
+#s2-axis-badge span.ax-z { color: #3b82f6; }
+
+/* View controls overlay bar */
+#s2-view-overlay {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+}
+.s2-ov-btn {
+  padding: 3px 9px;
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(20,22,24,.9);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: all .1s;
+}
+.s2-ov-btn:hover, .s2-ov-btn.active-view {
+  background: rgba(16,185,129,.2);
+  border-color: var(--s2);
+  color: var(--s2);
+}
+
+/* Elev viewport tiles (shown in multi-view mode below GeoGebra) */
+.elev-vp {
+  background: var(--bg1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.elev-vp-bar {
+  height: 22px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.elev-vp-name { font-size: 9px; font-weight: 600; color: var(--text1); }
+.elev-vp-scale { font-size: 8px; color: var(--text3); font-family: var(--font-mono); }
+.elev-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+.elev-canvas { display: block; width: 100%; height: 100%; }
+.elev-label {
+  position: absolute; bottom: 4px; left: 6px;
+  font-size: 8px; color: var(--text3);
+  font-family: var(--font-mono); pointer-events: none;
+}
+
+/* ─── STAGE 3: BLUEPRINT ──────────────────────────────────── */
+#stage-3 {
+  flex-direction: row;
+}
+#s3-config {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+#s3-config::-webkit-scrollbar { width: 4px; }
+#s3-config::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.config-section {
+  border-bottom: 1px solid var(--border);
+}
+.config-title {
+  padding: 8px 12px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  background: var(--bg1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.config-title i { font-size: 11px; color: var(--gold); }
+.config-body { padding: 8px 12px; }
+
+.cfg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.cfg-label { font-size: 10px; color: var(--text2); }
+.cfg-val {
+  font-size: 10px;
+  color: var(--text1);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.cfg-input {
+  background: var(--bg0);
+  border: 1px solid var(--border2);
+  color: var(--text1);
+  font-size: 10px;
+  padding: 2px 6px;
+  width: 80px;
+  font-family: var(--font-mono);
+  border-radius: 2px;
+  outline: none;
+}
+.cfg-input:focus { border-color: var(--s3); }
+.cfg-select {
+  background: var(--bg0);
+  border: 1px solid var(--border2);
+  color: var(--text1);
+  font-size: 10px;
+  padding: 2px 6px;
+  width: 120px;
+  border-radius: 2px;
+  outline: none;
+}
+.cfg-select:focus { border-color: var(--s3); }
+
+.wall-type-list {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wt-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg1);
+  cursor: pointer;
+}
+.wt-item:hover { border-color: var(--s3); }
+.wt-item.selected { border-color: var(--s3); background: rgba(245,158,11,.08); }
+.wt-swatch { width: 24px; height: 24px; border-radius: 2px; flex-shrink: 0; }
+.wt-info { flex: 1; }
+.wt-name { font-size: 10px; font-weight: 600; color: var(--text1); }
+.wt-sub { font-size: 9px; color: var(--text3); }
+.wt-thick {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+#s3-drawing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#s3-drawing-header {
+  height: 36px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#s3-canvas-frame {
+  flex: 1;
+  position: relative;
+  background: #f5f0e8;
+  overflow: hidden;
+}
+#s3-canvas { display: block; width: 100%; height: 100%; }
+
+.drawing-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, rgba(0,0,0,.4));
+  display: flex;
+  align-items: flex-end;
+  padding: 0 10px 6px;
+  pointer-events: none;
+}
+.drawing-overlay span {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,.6);
+}
+
+/* ─── STAGE 4: PARSER ─────────────────────────────────────── */
+#stage-4 {
+  flex-direction: row;
+}
+#s4-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#s4-left-header {
+  height: 36px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#s4-json-area {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg0);
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: #9ecbff;
+}
+#s4-json-area::-webkit-scrollbar { width: 5px; }
+#s4-json-area::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* JSON syntax colors */
+.json-key { color: #79c0ff; }
+.json-str { color: #a5d6ff; }
+.json-num { color: #f0a070; }
+.json-bool { color: #ff7b72; }
+.json-null { color: #8b949e; }
+.json-brace { color: #e6edf3; }
+
+#s4-right {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#s4-right-header {
+  height: 36px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  gap: 8px;
+  flex-shrink: 0;
+}
+#s4-right-header i { color: var(--purple); }
+
+.s4-stats {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.stat-card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stat-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.stat-info { flex: 1; }
+.stat-num { font-size: 16px; font-weight: 700; color: var(--text1); font-family: var(--font-mono); }
+.stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+
+.s4-flags {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+.s4-flags::-webkit-scrollbar { width: 4px; }
+.s4-flags::-webkit-scrollbar-thumb { background: var(--border2); }
+.flag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.flag-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.flag-dot.ok { background: var(--green); }
+.flag-dot.warn { background: var(--gold); }
+.flag-dot.err { background: var(--red); }
+.flag-text { font-size: 10px; color: var(--text2); line-height: 1.4; }
+.flag-code { font-size: 9px; color: var(--text3); font-family: var(--font-mono); }
+
+.s4-send-area {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.send-target {
+  background: var(--bg0);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 6px 10px;
+}
+.send-target-label { font-size: 9px; color: var(--text3); text-transform: uppercase; margin-bottom: 3px; }
+.send-target-val { font-size: 10px; color: var(--cyan); font-family: var(--font-mono); }
+.send-btn {
+  width: 100%;
+  padding: 8px;
+  background: var(--purple);
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.send-btn:hover { filter: brightness(1.15); }
+
+/* ─── STATUSBAR ───────────────────────────────────────────── */
+#statusbar {
+  height: 24px;
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#status-text {
+  font-size: 10px;
+  color: var(--text2);
+  flex: 1;
+}
+.status-badge {
+  font-size: 9px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+}
+.status-badge.live {
+  color: var(--green);
+  border-color: var(--green);
+}
+.status-coords {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+
+/* ─── AGENT / WS INTEGRATION STYLES ─────────────────────── */
+#ws-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text3);
+  display: inline-block;
+  margin-right: 4px;
+  transition: background .4s;
+  vertical-align: middle;
+}
+#ws-dot.connected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+#ws-dot.connecting { background: var(--gold); animation: ws-blink .9s infinite; }
+#ws-dot.error { background: var(--red); }
+@keyframes ws-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Ingest panel (Stage 1 sidebar extension) */
+#ingest-panel {
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ingest-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--cyan);
+  margin-bottom: 2px;
+}
+.ingest-row { display: flex; gap: 5px; align-items: center; }
+.ingest-input {
+  flex: 1;
+  background: var(--bg0);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text1);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 4px 7px;
+  min-width: 0;
+}
+.ingest-input:focus { outline: none; border-color: var(--cyan); }
+.ingest-btn {
+  padding: 4px 9px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--cyan);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.ingest-btn:hover { background: var(--bg4); }
+.ingest-status {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  min-height: 12px;
+}
+.ingest-status.ok  { color: var(--green); }
+.ingest-status.err { color: var(--red); }
+.ingest-status.busy{ color: var(--gold); }
+/* Legacy file-label rule removed — file upload path replaced by live canvas sync */
+
+/* Agent topology panel in Stage 4 */
+#s4-agent-panel {
+  border-top: 1px solid var(--border);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+#s4-agent-header {
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cyan);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+#s4-agent-body {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+#s4-agent-body::-webkit-scrollbar { width: 3px; }
+#s4-agent-body::-webkit-scrollbar-thumb { background: var(--border2); }
+.topo-row { display: flex; align-items: center; gap: 6px; }
+.topo-key { font-size: 9px; color: var(--text3); flex: 1; }
+.topo-val { font-size: 11px; font-weight: 700; color: var(--text1); font-family: var(--font-mono); }
+.topo-issue { font-size: 9px; color: var(--red); font-family: var(--font-mono); line-height: 1.4; }
+.topo-ok { font-size: 9px; color: var(--green); }
+.topo-valid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.topo-valid-badge.valid { background: rgba(16,185,129,.18); color: var(--green); }
+.topo-valid-badge.invalid { background: rgba(239,68,68,.18); color: var(--red); }
+
+/* Ingest source button in Stage 4 send area */
+.send-btn-secondary {
+  width: 100%;
+  padding: 7px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.send-btn-secondary:hover { background: var(--bg4); color: var(--text1); }
+
+/* ─── MISC UTILS ──────────────────────────────────────────── */
+.hatch-brc { /* brick hatch pattern swatch */ }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TITLEBAR -->
+  <div id="titlebar">
+    <span class="title-brand">KarlCON</span>
+    <span class="title-pipe">|</span>
+    <span class="title-doc">BIM Generation Pipeline v5.0.0</span>
+    <span class="title-version">Zimbabwe</span>
+    <span class="title-version" id="ws-status-badge" style="cursor:default;display:flex;align-items:center;gap:4px;">
+      <span id="ws-dot"></span><span id="ws-label">Agent offline</span>
+    </span>
+    <div class="title-winbtns">
+      <button class="title-wbtn">—</button>
+      <button class="title-wbtn">&#9633;</button>
+      <button class="title-wbtn" style="background:#c0392b">&#x2715;</button>
+    </div>
+  </div>
+
+  <!-- PIPELINE NAVIGATOR -->
+  <div id="pipeline-nav">
+    <div class="pnav-stage active" data-stage="1" id="nav-1">
+      <div class="pnav-num">1</div>
+      <div>
+        <div class="pnav-label">Sketch</div>
+        <div class="pnav-sub">3D freehand input</div>
+      </div>
+    </div>
+    <div class="pnav-arrow">&#9658;</div>
+    <div class="pnav-stage" data-stage="2" id="nav-2">
+      <div class="pnav-num">2</div>
+      <div>
+        <div class="pnav-label">Elevations</div>
+        <div class="pnav-sub">Orthographic projections</div>
+      </div>
+    </div>
+    <div class="pnav-arrow">&#9658;</div>
+    <div class="pnav-stage" data-stage="3" id="nav-3">
+      <div class="pnav-num">3</div>
+      <div>
+        <div class="pnav-label">Blueprint</div>
+        <div class="pnav-sub">Technical drawing config</div>
+      </div>
+    </div>
+    <div class="pnav-arrow">&#9658;</div>
+    <div class="pnav-stage" data-stage="4" id="nav-4">
+      <div class="pnav-num">4</div>
+      <div>
+        <div class="pnav-label">Parser / BIM</div>
+        <div class="pnav-sub">Feature extraction</div>
+      </div>
+    </div>
+
+    <div class="pnav-right">
+      <button class="pnav-btn btn-ghost" id="btn-prev">&#8592; Back</button>
+      <button class="pnav-btn btn-primary" id="btn-next">Next Stage &#8594;</button>
+      <button class="pnav-btn btn-success hidden" id="btn-send-bim">&#8679; Send to BIM Core</button>
+    </div>
+  </div>
+
+  <!-- STAGE CONTAINER -->
+  <div id="stage-container">
+
+    <!-- ═══ STAGE 1: SKETCH ═══════════════════════════════════ -->
+    <div class="stage-panel visible" id="stage-1">
+
+      <div id="s1-sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Draw Tools</div>
+          <div class="tool-list">
+            <div class="tool-btn active" data-tool="wall">
+              <i class="ti fa-solid fa-minus"></i>
+              <span class="tool-btn-label">Wall</span>
+              <span class="tool-btn-shortcut">W</span>
+            </div>
+            <div class="tool-btn" data-tool="door">
+              <i class="ti fa-regular fa-square"></i>
+              <span class="tool-btn-label">Door</span>
+              <span class="tool-btn-shortcut">D</span>
+            </div>
+            <div class="tool-btn" data-tool="window">
+              <i class="ti fa-solid fa-border-all"></i>
+              <span class="tool-btn-label">Window</span>
+              <span class="tool-btn-shortcut">V</span>
+            </div>
+            <div class="tool-btn" data-tool="column">
+              <i class="ti fa-solid fa-circle-dot"></i>
+              <span class="tool-btn-label">Column</span>
+              <span class="tool-btn-shortcut">C</span>
+            </div>
+            <div class="tool-btn" data-tool="slab">
+              <i class="ti fa-solid fa-layer-group"></i>
+              <span class="tool-btn-label">Slab / Floor</span>
+              <span class="tool-btn-shortcut">S</span>
+            </div>
+            <div class="tool-btn" data-tool="beam">
+              <i class="ti fa-solid fa-grip-lines"></i>
+              <span class="tool-btn-label">Beam</span>
+              <span class="tool-btn-shortcut">B</span>
+            </div>
+            <div class="tool-btn" data-tool="stair">
+              <i class="ti fa-solid fa-stairs"></i>
+              <span class="tool-btn-label">Stair</span>
+              <span class="tool-btn-shortcut">T</span>
+            </div>
+            <div class="tool-btn" data-tool="roof">
+              <i class="ti fa-solid fa-house-chimney"></i>
+              <span class="tool-btn-label">Roof Line</span>
+              <span class="tool-btn-shortcut">R</span>
+            </div>
+            <div class="tool-btn" data-tool="dim">
+              <i class="ti fa-solid fa-ruler"></i>
+              <span class="tool-btn-label">Dimension</span>
+              <span class="tool-btn-shortcut">I</span>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Properties</div>
+          <div class="props-grid">
+            <div class="prop-row"><span class="prop-key">Tool</span><span class="prop-val" id="p-tool">WALL</span></div>
+            <div class="prop-row"><span class="prop-key">Elements</span><span class="prop-val" id="p-count">0</span></div>
+            <div class="prop-row"><span class="prop-key">Last Length</span><span class="prop-val" id="p-len">—</span></div>
+            <div class="prop-row"><span class="prop-key">Scale</span><span class="prop-val">1:100</span></div>
+            <div class="prop-row"><span class="prop-key">Level</span><span class="prop-val">GF +0.00m</span></div>
+          </div>
+        </div>
+        <div class="sidebar-section" style="flex:1">
+          <div class="sidebar-section-title">Layer Visibility</div>
+          <div class="props-grid">
+            <label class="prop-row" style="cursor:pointer"><span class="prop-key">Walls</span><input type="checkbox" checked id="lv-wall"></label>
+            <label class="prop-row" style="cursor:pointer"><span class="prop-key">Doors/Win</span><input type="checkbox" checked id="lv-open"></label>
+            <label class="prop-row" style="cursor:pointer"><span class="prop-key">Structure</span><input type="checkbox" checked id="lv-struct"></label>
+            <label class="prop-row" style="cursor:pointer"><span class="prop-key">Grid</span><input type="checkbox" checked id="lv-grid"></label>
+            <label class="prop-row" style="cursor:pointer"><span class="prop-key">Dimensions</span><input type="checkbox" checked id="lv-dim"></label>
+          </div>
+        </div>
+
+        <!-- Live canvas sync panel — v5.1.0 canvas-only -->
+        <div id="ingest-panel">
+          <div class="ingest-title"><i class="fa-solid fa-satellite-dish"></i> Live Canvas Sync</div>
+          <div class="ingest-status" id="ingest-status">⏳ Connecting to pipeline WebSocket…</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:6px;">
+            Strokes stream automatically to the BIM agent via WebSocket.<br>
+            Run: <code style="color:var(--cyan)">python server.py</code>
+          </div>
+        </div>
+      </div>
+
+      <div id="s1-canvas-area">
+        <div id="s1-toolbar">
+          <button class="tb-btn" id="tb-undo"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+          <button class="tb-btn" id="tb-redo"><i class="fa-solid fa-rotate-right"></i> Redo</button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="tb-clear"><i class="fa-solid fa-trash-can"></i> Clear</button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="tb-snap"><i class="fa-solid fa-magnet"></i> Snap</button>
+          <button class="tb-btn" id="tb-ortho"><i class="fa-solid fa-arrows-up-down-left-right"></i> Ortho</button>
+          <button class="tb-btn active" id="tb-straight" title="Auto-straighten lines to nearest 45° and merge corners"><i class="fa-solid fa-ruler-combined"></i> Straighten</button>
+          <button class="tb-btn active" id="tb-topo" title="Show topology node overlay (corner/T/X/free joints)"><i class="fa-solid fa-diagram-project"></i> Topo</button>
+          <div class="tb-sep"></div>
+          <span style="font-size:10px;color:var(--text3)">Floor Plan — Level 0 (GF)</span>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <span style="font-size:9px;color:var(--text3)">TAB = cycle tools &nbsp;|&nbsp; ESC = cancel &nbsp;|&nbsp; Ctrl+Z = undo</span>
+          </div>
+        </div>
+        <div class="canvas-frame" id="s1-frame">
+          <canvas id="s1-canvas" class="draw-canvas"></canvas>
+          <div class="canvas-overlay" id="s1-coords">X: 0.000m &nbsp; Y: 0.000m</div>
+          <div class="canvas-overlay-tr" id="s1-hint">Click &amp; drag to draw &nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ STAGE 2: 3D GeoGebra Viewer (ISO 128 Axonometric) ═══ -->
+    <div class="stage-panel" id="stage-2">
+      <div id="s2-top">
+        <span style="font-size:11px;font-weight:600;color:var(--s2)">Orthographic Drawing Viewer</span>
+        <span style="font-size:10px;color:var(--text3)">— ISO 128-30/34 first-angle projection · rendered by projection.py</span>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <button class="s2-view-btn active" data-view="plan">Plan (Top)</button>
+          <button class="s2-view-btn" data-view="north">N Elev</button>
+          <button class="s2-view-btn" data-view="south">S Elev</button>
+          <button class="s2-view-btn" data-view="east">E Elev</button>
+          <button class="s2-view-btn" data-view="west">W Elev</button>
+          <button class="s2-view-btn" data-view="section_aa">Section A-A</button>
+          <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+          <button class="s2-view-btn" id="s2-regen-btn" title="Rebuild drawings from sketch"><i class="fa-solid fa-rotate" style="font-size:10px"></i> Rebuild</button>
+        </div>
+      </div>
+      <div id="s2-body">
+
+        <!-- Python SVG drawing panel -->
+        <div id="s2-ggb-panel">
+          <div id="ggb-container" style="position:relative;background:#1a1d24;">
+            <!-- Loading / idle state -->
+            <div id="s2-ggb-loading" style="display:flex;">
+              <div class="ggb-spinner"></div>
+              <p id="s2-load-msg">Click <strong>Rebuild</strong> to generate drawings from sketch…</p>
+            </div>
+            <!-- SVG drawing display -->
+            <div id="s2-svg-display" style="display:none;width:100%;height:100%;overflow:auto;background:#fff;"></div>
+          </div>
+
+          <!-- Standard badge -->
+          <div id="s2-axis-badge">
+            <span class="ax ax-x">X</span> East &nbsp;
+            <span class="ax ax-y">Y</span> North &nbsp;
+            <span class="ax ax-z">Z</span> Up
+            <br>ISO 128-30/34 · First-angle · projection.py
+          </div>
+        </div>
+
+        <!-- Right info + math panel -->
+        <div id="s2-info-panel">
+          <div class="s2-info-section">
+            <div class="s2-info-title"><i class="fa-solid fa-cube"></i> Drawing Stats</div>
+            <div class="s2-info-body" id="s2-geom-stats">
+              <div class="s2-row"><span class="s2-key">Walls</span><span class="s2-val" id="s2-stat-walls">—</span></div>
+              <div class="s2-row"><span class="s2-key">Openings</span><span class="s2-val" id="s2-stat-opens">—</span></div>
+              <div class="s2-row"><span class="s2-key">Height</span><span class="s2-val" id="s2-stat-height">—</span></div>
+              <div class="s2-row"><span class="s2-key">Thickness</span><span class="s2-val" id="s2-stat-thick">—</span></div>
+              <div class="s2-row"><span class="s2-key">View</span><span class="s2-val" id="s2-stat-view">—</span></div>
+              <div class="s2-row"><span class="s2-key">Engine</span><span class="s2-val">projection.py</span></div>
+            </div>
+          </div>
+          <div class="s2-info-section">
+            <div class="s2-info-title"><i class="fa-solid fa-ruler-combined"></i> Projection</div>
+            <div class="s2-info-body">
+              <div class="s2-row"><span class="s2-key">Type</span><span class="s2-val">Orthographic</span></div>
+              <div class="s2-row"><span class="s2-key">Method</span><span class="s2-val">First-angle</span></div>
+              <div class="s2-row"><span class="s2-key">Scale</span><span class="s2-val">1:100 / 1:50</span></div>
+              <div class="s2-row"><span class="s2-key">Standard</span><span class="s2-val">ISO 128-30</span></div>
+            </div>
+          </div>
+          <!-- Math block -->
+          <div id="s2-math-block">
+            <div class="math-heading">First-Angle Projection — ISO 128-30</div>
+            <div class="math-comment">Views (Monge descriptive geometry):</div>
+            <div class="math-formula">Plan    → XY plane, view -Z
+N Elev  → XZ plane, view -Y
+S Elev  → XZ plane, view +Y (mirror X)
+E Elev  → YZ plane, view +X (mirror Y)
+W Elev  → YZ plane, view -X
+§ A-A   → XZ cut, ISO 128-44</div>
+            <div class="math-comment">Wall profile (plan double-line):</div>
+            <div class="math-formula">centreline ± thickness/2
+ISO 13567 masonry convention</div>
+            <div class="math-comment">Opening elements:</div>
+            <div class="math-formula">door  → sill=0, h=0.58·H_w
+window→ sill=0.25·H_w, h=0.35·H_w
+IfcOpeningElement / IfcRelVoidsElement</div>
+            <div class="math-heading">Server</div>
+            <div class="math-comment">Python endpoint (server.py):</div>
+            <div class="math-formula">POST …/pipeline/generate
+→ plan, north, south, east,
+  west, section_aa SVGs
+→ IFC model (base64)</div>
+            <div class="math-heading">References</div>
+            <div class="math-comment">ISO 128-30:2001 — Multiview projection.
+ISO 128-34:2001 — First-angle views.
+ISO 128-44:2001 — Sections.
+Monge, G. (1799) Géométrie descriptive.
+Borrmann et al. (2018) BIM, Ch.5.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ STAGE 3: BLUEPRINT ════════════════════════════════ -->
+    <div class="stage-panel" id="stage-3">
+      <div id="s3-config">
+
+        <div class="config-section">
+          <div class="config-title"><i class="fa-solid fa-building"></i> Project</div>
+          <div class="config-body">
+            <div class="cfg-row"><span class="cfg-label">Project Title</span><input class="cfg-input" id="cfg-proj-title" value="KarlCON_Site_A" style="width:100%"></div>
+            <div class="cfg-row"><span class="cfg-label">Scale</span>
+              <select class="cfg-select" id="cfg-scale">
+                <option>1:50</option><option selected>1:100</option><option>1:200</option><option>1:500</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Drawing Type</span>
+              <select class="cfg-select" id="cfg-dtype">
+                <option selected>Construction</option><option>Schematic</option><option>Structural</option><option>As-Built</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Sheet Size</span>
+              <select class="cfg-select">
+                <option>A1</option><option selected>A2</option><option>A3</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-title"><i class="fa-solid fa-layer-group"></i> Floor Levels</div>
+          <div class="config-body">
+            <div class="cfg-row"><span class="cfg-label">Ground Floor</span><input class="cfg-input" id="cfg-gf" value="+0.000 m"></div>
+            <div class="cfg-row"><span class="cfg-label">Floor Height</span><input class="cfg-input" id="cfg-fh" value="3.000 m"></div>
+            <div class="cfg-row"><span class="cfg-label">Wall Height</span><input class="cfg-input" id="cfg-wh" value="3.000 m"></div>
+            <div class="cfg-row"><span class="cfg-label">Storey Count</span><input class="cfg-input" id="cfg-stories" value="2"></div>
+            <div class="cfg-row"><span class="cfg-label">Slab Thickness</span><input class="cfg-input" id="cfg-slab" value="0.200 m"></div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-title"><i class="fa-solid fa-bricks"></i> Wall Types</div>
+          <div class="wall-type-list" id="wt-list">
+            <div class="wt-item selected" data-wtype="EW230">
+              <div class="wt-swatch" style="background:linear-gradient(135deg,#888 25%,#aaa 25%,#aaa 50%,#888 50%,#888 75%,#aaa 75%);background-size:6px 6px;border:1px solid #666;"></div>
+              <div class="wt-info"><div class="wt-name">Ext. Brick Wall</div><div class="wt-sub">230mm cavity</div></div>
+              <div class="wt-thick">230mm</div>
+            </div>
+            <div class="wt-item" data-wtype="IW115">
+              <div class="wt-swatch" style="background:repeating-linear-gradient(90deg,#666 0px,#666 2px,#444 2px,#444 8px);border:1px solid #555;"></div>
+              <div class="wt-info"><div class="wt-name">Int. Block Wall</div><div class="wt-sub">115mm concrete</div></div>
+              <div class="wt-thick">115mm</div>
+            </div>
+            <div class="wt-item" data-wtype="IW075">
+              <div class="wt-swatch" style="background:repeating-linear-gradient(45deg,#555 0px,#555 2px,#333 2px,#333 6px);border:1px solid #555;"></div>
+              <div class="wt-info"><div class="wt-name">Partition</div><div class="wt-sub">75mm stud</div></div>
+              <div class="wt-thick">75mm</div>
+            </div>
+            <div class="wt-item" data-wtype="RC200">
+              <div class="wt-swatch" style="background:#555;border:1px solid #888;position:relative;overflow:hidden;">
+                <div style="position:absolute;inset:2px;background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,rgba(255,255,255,.2) 3px,rgba(255,255,255,.2) 4px);"></div>
+              </div>
+              <div class="wt-info"><div class="wt-name">RC Wall</div><div class="wt-sub">200mm reinforced</div></div>
+              <div class="wt-thick">200mm</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-title"><i class="fa-solid fa-helmet-safety"></i> Structural Grade</div>
+          <div class="config-body">
+            <div class="cfg-row"><span class="cfg-label">Concrete Grade</span>
+              <select class="cfg-select" id="cfg-concrete">
+                <option>C20/25</option><option selected>C25/30</option><option>C30/37</option><option>C35/45</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Rebar Grade</span>
+              <select class="cfg-select">
+                <option>Y250</option><option selected>Y460</option><option>Y500</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Foundation</span>
+              <select class="cfg-select">
+                <option selected>Strip Fdn</option><option>Pad Fdn</option><option>Raft</option><option>Pile</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Wind Load Zone</span>
+              <select class="cfg-select">
+                <option>Zone 1</option><option selected>Zone 2</option><option>Zone 3</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Seismic Zone</span>
+              <select class="cfg-select">
+                <option selected>Low</option><option>Moderate</option><option>High</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-title"><i class="fa-solid fa-palette"></i> Annotation</div>
+          <div class="config-body">
+            <div class="cfg-row"><span class="cfg-label">Dimension Style</span>
+              <select class="cfg-select">
+                <option selected>Linear – mm</option><option>Linear – m</option><option>Running</option>
+              </select>
+            </div>
+            <div class="cfg-row"><span class="cfg-label">Grid Bubbles</span><input type="checkbox" checked></div>
+            <div class="cfg-row"><span class="cfg-label">Hatch Walls</span><input type="checkbox" checked id="cfg-hatch"></div>
+            <div class="cfg-row"><span class="cfg-label">North Arrow</span><input type="checkbox" checked></div>
+            <div class="cfg-row"><span class="cfg-label">Title Block</span><input type="checkbox" checked></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="s3-drawing">
+        <div id="s3-drawing-header">
+          <span style="font-size:11px;font-weight:600;color:var(--s3)">Technical Drawing Preview</span>
+          <span style="font-size:10px;color:var(--text3)">— blueprint with annotations</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="tb-btn" id="s3-regen" style="color:var(--s3);border:1px solid rgba(245,158,11,.3)"><i class="fa-solid fa-rotate"></i> Regenerate</button>
+            <button class="tb-btn"><i class="fa-solid fa-download"></i> Export SVG</button>
+          </div>
+        </div>
+        <div id="s3-canvas-frame">
+          <canvas id="s3-canvas"></canvas>
+          <div class="drawing-overlay"><span id="s3-status">Technical drawing — scale 1:100</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ STAGE 4: PARSER / BIM ══════════════════════════════ -->
+    <div class="stage-panel" id="stage-4">
+      <div id="s4-left">
+        <div id="s4-left-header">
+          <span style="font-size:11px;font-weight:600;color:var(--purple)">Serialized BIM Payload</span>
+          <span style="font-size:10px;color:var(--text3)">— ready for karlcon_plan_integrated.py</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="tb-btn" id="s4-copy"><i class="fa-regular fa-copy"></i> Copy JSON</button>
+            <button class="tb-btn" id="s4-download"><i class="fa-solid fa-download"></i> Save .json</button>
+          </div>
+        </div>
+        <div id="s4-json-area"></div>
+      </div>
+
+      <div id="s4-right">
+        <div id="s4-right-header">
+          <i class="fa-solid fa-chart-bar"></i> Extraction Summary
+        </div>
+        <div class="s4-stats" id="s4-stat-cards"></div>
+        <div class="s4-flags" id="s4-flags"></div>
+
+        <!-- Agent Topology Panel -->
+        <div id="s4-agent-panel">
+          <div id="s4-agent-header" onclick="toggleAgentPanel()">
+            <i class="fa-solid fa-diagram-project" style="color:var(--cyan)"></i>
+            Agent Graph Topology
+            <span id="s4-topo-valid-badge" class="topo-valid-badge" style="display:none"></span>
+            <i class="fa-solid fa-chevron-down" id="s4-agent-chevron" style="margin-left:auto;font-size:9px;color:var(--text3)"></i>
+          </div>
+          <div id="s4-agent-body">
+            <div style="font-size:9px;color:var(--text3)">Draw on canvas to populate the agent graph via WebSocket.</div>
+          </div>
+        </div>
+
+        <div class="s4-send-area">
+          <div class="send-target">
+            <div class="send-target-label">Pipeline Target</div>
+            <div class="send-target-val" id="pipeline-target-display">POST …/pipeline/generate</div>
+          </div>
+          <button class="send-btn" id="s4-send-claude">
+            <i class="fa-solid fa-bolt"></i>
+            Generate IFC + Drawings (Python)
+          </button>
+          <button class="send-btn-secondary" id="s4-fetch-topology">
+            <i class="fa-solid fa-circle-nodes"></i>
+            Refresh Agent Topology
+          </button>
+          <button class="send-btn-secondary" id="s4-export-agent-ifc">
+            <i class="fa-solid fa-file-export"></i>
+            Export Agent IFC JSON
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATUSBAR -->
+  <div id="statusbar">
+    <span id="status-text">Stage 1 — Sketch &nbsp;|&nbsp; Click and drag on canvas to draw elements &nbsp;|&nbsp; TAB to cycle tools</span>
+    <span class="status-coords" id="coords-display">X: 0.000 &nbsp; Y: 0.000</span>
+    <span class="status-badge live">Stage 1</span>
+    <span class="status-badge" id="sb-count">0 elements</span>
+    <span class="status-badge">KarlCON v5.0.0</span>
+  </div>
+
+</div>
+
+<script>
+// ── GeoGebra callback: must be in global scope ───────────────
+window.ggbOnInit = function(id) {
+  // GeoGebra uses ggbOnInit(appletId) as the ready callback
+  if (window._karlconGGBReady) window._karlconGGBReady(id);
+};
+(function() {
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════════════════════
+const SCALE = 0.05; // pixels per mm
+
+const TOOLS = {
+  wall:   { color: '#c8c8c8', lw: 2.0,  ifcType: 'IfcWall',    family: 'Basic Wall',     typeKey: 'EXT_BRICK_230' },
+  door:   { color: '#4a90e2', lw: 1.5,  ifcType: 'IfcDoor',    family: 'Single Door',    typeKey: 'SD_900' },
+  window: { color: '#5ab8d6', lw: 1.5,  ifcType: 'IfcWindow',  family: 'Fixed Window',   typeKey: 'FW_1200x1500' },
+  column: { color: '#e0c060', lw: 2.0,  ifcType: 'IfcColumn',  family: 'RC Column',      typeKey: 'RCC_300x300' },
+  slab:   { color: '#a0a0a0', lw: 1.0,  ifcType: 'IfcSlab',    family: 'RC Slab',        typeKey: 'SLAB_200' },
+  beam:   { color: '#d4a060', lw: 2.0,  ifcType: 'IfcBeam',    family: 'RC Beam',        typeKey: 'BEAM_300x600' },
+  stair:  { color: '#80c080', lw: 1.5,  ifcType: 'IfcStairFlight', family: 'Straight Stair', typeKey: 'STAIR_STD' },
+  roof:   { color: '#c06060', lw: 1.5,  ifcType: 'IfcRoof',    family: 'Hip Roof',       typeKey: 'ROOF_HIP' },
+  dim:    { color: '#6888b8', lw: 0.8,  ifcType: 'IfcAnnotation', family: 'Dimension', typeKey: 'DIM_LINEAR' },
+};
+
+let currentStage = 1;
+let currentTool = 'wall';
+let drawing = false;
+let strokes = [];
+let currentPts = [];
+let historyStack = [];
+let mouseX = 0, mouseY = 0;
+let snapEnabled = true;
+let orthoEnabled = false;
+let bpConfig = {};
+
+// ═══════════════════════════════════════════════════════════
+// STAGE NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function goToStage(n) {
+  document.querySelectorAll('.stage-panel').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.pnav-stage').forEach(s => {
+    s.classList.remove('active');
+    const sn = parseInt(s.dataset.stage);
+    if (sn < n) s.classList.add('done');
+    else s.classList.remove('done');
+  });
+  document.getElementById('stage-' + n).classList.add('visible');
+  document.getElementById('nav-' + n).classList.add('active');
+  currentStage = n;
+
+  const prev = document.getElementById('btn-prev');
+  const next = document.getElementById('btn-next');
+  const send = document.getElementById('btn-send-bim');
+  prev.style.display = n === 1 ? 'none' : '';
+  next.style.display = n === 4 ? 'none' : '';
+  send.classList.toggle('hidden', n !== 4);
+
+  document.querySelector('.status-badge.live').textContent = 'Stage ' + n;
+
+  const labels = ['', 'Stage 1 — Sketch | Draw walls, doors, columns, and structure on the canvas', 'Stage 2 — Drawing Viewer | ISO 128-30/34 first-angle orthographic projections via projection.py', 'Stage 3 — Blueprint | Technical drawing configuration and structural parameters', 'Stage 4 — Parser | Inspect and send the serialized payload to the BIM core'];
+  setStatus(labels[n]);
+
+  if (n === 2) { setTimeout(initStage2, 30); }
+  if (n === 3) renderBlueprint();
+  if (n === 4) buildPayload();
+
+  setTimeout(() => {
+    if (n === 1) resizeSketchCanvas();
+    if (n === 3) resizeBlueprintCanvas();
+  }, 20);
+}
+
+document.getElementById('btn-next').addEventListener('click', () => { if (currentStage < 4) goToStage(currentStage + 1); });
+document.getElementById('btn-prev').addEventListener('click', () => { if (currentStage > 1) goToStage(currentStage - 1); });
+document.getElementById('btn-send-bim').addEventListener('click', () => { document.getElementById('s4-send-claude').click(); });
+
+document.querySelectorAll('.pnav-stage').forEach(s => {
+  s.addEventListener('click', () => goToStage(parseInt(s.dataset.stage)));
+});
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 1 — SKETCH
+// ═══════════════════════════════════════════════════════════
+const s1Canvas = document.getElementById('s1-canvas');
+const s1ctx = s1Canvas.getContext('2d');
+
+function resizeSketchCanvas() {
+  const frame = document.getElementById('s1-frame');
+  s1Canvas.width = frame.clientWidth;
+  s1Canvas.height = frame.clientHeight;
+  s1Canvas.style.width = frame.clientWidth + 'px';
+  s1Canvas.style.height = frame.clientHeight + 'px';
+  renderSketch();
+}
+new ResizeObserver(resizeSketchCanvas).observe(document.getElementById('s1-frame'));
+
+function drawGrid(ctx, canvas) {
+  const W = canvas.width, H = canvas.height;
+  const lv = document.getElementById('lv-grid');
+  if (lv && !lv.checked) return;
+  ctx.save();
+  for (let x = 0; x < W; x += 20) {
+    ctx.beginPath();
+    ctx.strokeStyle = x % 100 === 0 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = x % 100 === 0 ? 0.5 : 0.3;
+    ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 20) {
+    ctx.beginPath();
+    ctx.strokeStyle = y % 100 === 0 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = y % 100 === 0 ? 0.5 : 0.3;
+    ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  // axis labels at grid intersections
+  ctx.font = '8px Courier New';
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.textAlign = 'left';
+  for (let x = 100; x < W; x += 100) {
+    ctx.fillText(Math.round(x / SCALE / 1000 * 10) / 10 + 'm', x + 2, 10);
+  }
+  ctx.restore();
+}
+
+function pxDist(a, b) { return Math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2); }
+
+function drawStroke(ctx, stroke, highlight) {
+  if (!stroke.pts || stroke.pts.length < 2) return;
+  const td = TOOLS[stroke.tool] || TOOLS.wall;
+
+  // layer visibility
+  const isOpen = stroke.tool === 'door' || stroke.tool === 'window';
+  const isStruct = stroke.tool === 'column' || stroke.tool === 'beam' || stroke.tool === 'slab';
+  if (stroke.tool === 'wall' && document.getElementById('lv-wall') && !document.getElementById('lv-wall').checked) return;
+  if (isOpen && document.getElementById('lv-open') && !document.getElementById('lv-open').checked) return;
+  if (isStruct && document.getElementById('lv-struct') && !document.getElementById('lv-struct').checked) return;
+  if (stroke.tool === 'dim' && document.getElementById('lv-dim') && !document.getElementById('lv-dim').checked) return;
+
+  ctx.save();
+  ctx.strokeStyle = highlight ? '#fff' : td.color;
+  ctx.lineWidth = highlight ? td.lw + 1 : td.lw;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  // wall gets double-line treatment
+  if (stroke.tool === 'wall') {
+    drawDoubleWall(ctx, stroke.pts, td.color, highlight);
+    ctx.restore(); return;
+  }
+  if (stroke.tool === 'column') {
+    drawColumn(ctx, stroke.pts, td.color, highlight);
+    ctx.restore(); return;
+  }
+  if (stroke.tool === 'dim') {
+    ctx.setLineDash([5, 3]);
+    ctx.globalAlpha = 0.7;
+  }
+  ctx.beginPath();
+  ctx.moveTo(stroke.pts[0][0], stroke.pts[0][1]);
+  for (let i = 1; i < stroke.pts.length; i++) ctx.lineTo(stroke.pts[i][0], stroke.pts[i][1]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // dim annotation
+  if (stroke.tool === 'dim' && stroke.pts.length >= 2) {
+    const a = stroke.pts[0], b = stroke.pts[stroke.pts.length - 1];
+    const d = pxDist(a, b);
+    const mm = Math.round(d / SCALE);
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 10;
+    ctx.font = '9px Courier New'; ctx.fillStyle = '#6888b8';
+    ctx.textAlign = 'center'; ctx.globalAlpha = 1;
+    ctx.fillText(mm >= 1000 ? (mm / 1000).toFixed(2) + 'm' : mm + 'mm', mx, my);
+    // tick marks
+    [a, b].forEach(p => {
+      const angle = Math.atan2(b[1] - a[1], b[0] - a[0]) + Math.PI / 2;
+      ctx.strokeStyle = '#6888b8'; ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(p[0] + Math.cos(angle) * 6, p[1] + Math.sin(angle) * 6);
+      ctx.lineTo(p[0] - Math.cos(angle) * 6, p[1] - Math.sin(angle) * 6);
+      ctx.stroke();
+    });
+  }
+
+  // length label for active drawing
+  if (highlight && stroke.pts.length >= 2) {
+    const a = stroke.pts[0], b = stroke.pts[stroke.pts.length - 1];
+    const d = pxDist(a, b);
+    const mm = Math.round(d / SCALE);
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 9;
+    ctx.font = '9px Courier New'; ctx.fillStyle = '#f0c060'; ctx.textAlign = 'center';
+    ctx.fillText(mm >= 1000 ? (mm / 1000).toFixed(2) + 'm' : mm + 'mm', mx, my);
+  }
+  ctx.restore();
+}
+
+function drawDoubleWall(ctx, pts, color, highlight) {
+  if (pts.length < 2) return;
+  const WTHICK = 6;
+  ctx.strokeStyle = highlight ? 'rgba(255,255,255,0.9)' : color;
+  ctx.lineWidth = WTHICK;
+  ctx.lineCap = 'square';
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+
+  // inner cavity line
+  ctx.strokeStyle = highlight ? 'rgba(30,33,40,0.9)' : '#15181e';
+  ctx.lineWidth = WTHICK - 2;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+
+  // outer edges
+  ctx.strokeStyle = highlight ? '#fff' : '#aaa';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+function drawColumn(ctx, pts, color, highlight) {
+  if (pts.length < 1) return;
+  const x = pts[0][0], y = pts[0][1], s = 10;
+  ctx.fillStyle = highlight ? '#fff' : color;
+  ctx.strokeStyle = highlight ? '#fff' : color;
+  ctx.lineWidth = 1;
+  ctx.fillRect(x - s / 2, y - s / 2, s, s);
+  ctx.strokeRect(x - s / 2 - 1, y - s / 2 - 1, s + 2, s + 2);
+}
+
+function drawCrosshair(ctx, x, y) {
+  if (x < 0) return;
+  const td = TOOLS[currentTool] || TOOLS.wall;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(150,160,180,0.35)'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, s1Canvas.height); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s1Canvas.width, y); ctx.stroke();
+  ctx.fillStyle = td.color;
+  ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function renderSketch() {
+  const W = s1Canvas.width, H = s1Canvas.height;
+  s1ctx.clearRect(0, 0, W, H);
+  s1ctx.fillStyle = '#15181e'; s1ctx.fillRect(0, 0, W, H);
+  drawGrid(s1ctx, s1Canvas);
+  strokes.forEach(s => drawStroke(s1ctx, s, false));
+  if (topoOverlayEnabled) drawTopoOverlay(s1ctx);
+  if (drawing && currentPts.length >= 2) {
+    drawStroke(s1ctx, { tool: currentTool, pts: currentPts }, true);
+    drawJointSnapPreview(s1ctx);
+    drawSegmentSnapPreview(s1ctx);
+  }
+  if (!drawing) drawCrosshair(s1ctx, mouseX, mouseY);
+  drawDisplacementArrows(s1ctx);
+}
+
+let topoOverlayEnabled = true;
+
+/** Draw magnet ring on nearest joint to cursor while drawing (endpoint snap) */
+function drawJointSnapPreview(ctx) {
+  if (!autoStraightenEnabled || currentPts.length < 1) return;
+  const tip = currentPts[currentPts.length - 1];
+  const joints = getExistingEndpoints(-1);
+  let best = null, bestD = JOINT_SNAP_DIST;
+  joints.forEach(c => {
+    const d = Math.hypot(tip[0]-c[0], tip[1]-c[1]);
+    if (d < bestD) { bestD = d; best = c; }
+  });
+  if (!best) return;
+  ctx.save();
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(best[0], best[1], 9, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(245,158,11,0.25)';
+  ctx.beginPath(); ctx.arc(best[0], best[1], 9, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = 'rgba(245,158,11,0.45)'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(tip[0], tip[1]); ctx.lineTo(best[0], best[1]); ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * NEW: T-snap preview – while drawing, show if the cursor tip is near
+ * the INTERIOR of an existing wall segment (would create a T-junction).
+ * Shows a cross-hair target on the wall centreline.
+ */
+function drawSegmentSnapPreview(ctx) {
+  if (!autoStraightenEnabled || currentTool !== 'wall' || currentPts.length < 1) return;
+  const tip = currentPts[currentPts.length - 1];
+  let best = null, bestD = CROSSING_SNAP_DIST;
+  strokes.forEach(s => {
+    if (s.tool !== 'wall' || !s.pts || s.pts.length < 2) return;
+    const a = s.pts[0], b = s.pts[s.pts.length - 1];
+    const res = closestPointOnSeg(a[0], a[1], b[0], b[1], tip[0], tip[1]);
+    if (res.dist < bestD && res.t > 0.05 && res.t < 0.95) {
+      bestD = res.dist; best = res;
+    }
+  });
+  if (!best) return;
+  ctx.save();
+  // Cyan cross-hair on wall centreline = T-junction preview
+  ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 1.2;
+  const r = 7;
+  ctx.beginPath();
+  ctx.moveTo(best.x - r, best.y); ctx.lineTo(best.x + r, best.y);
+  ctx.moveTo(best.x, best.y - r); ctx.lineTo(best.x, best.y + r);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(6,182,212,0.4)'; ctx.lineWidth = 0.8;
+  ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(best.x, best.y, 10, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/**
+ * Topology overlay: draw node type indicators on all wall joints.
+ * corner = small white square, T = yellow T-mark, X = red X, free = red circle
+ * Visual basis: WallPlan node-type annotation (Sun et al. ACM TOG 2022)
+ */
+function drawTopoOverlay(ctx) {
+  if (!topoNodes || topoNodes.length === 0) return;
+  ctx.save();
+  topoNodes.forEach(({ x, y, type }) => {
+    ctx.globalAlpha = 0.75;
+    if (type === 'corner') {
+      ctx.strokeStyle = '#a0a8c0'; ctx.lineWidth = 1;
+      ctx.strokeRect(x - 4, y - 4, 8, 8);
+    } else if (type === 'T') {
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 4); ctx.lineTo(x + 5, y - 4); // top bar
+      ctx.moveTo(x, y - 4);     ctx.lineTo(x, y + 5);      // stem
+      ctx.stroke();
+    } else if (type === 'X') {
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5);
+      ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5);
+      ctx.stroke();
+    } else { // free endpoint
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.stroke();
+    }
+  });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/** Draw displacement correction arrows after a snap is applied */
+function drawDisplacementArrows(ctx) {
+  if (!lastDisplacementArrows || lastDisplacementArrows.length === 0) return;
+  ctx.save();
+  lastDisplacementArrows.forEach(({from, to}) => {
+    const dx = to[0]-from[0], dy = to[1]-from[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx/len, uy = dy/len;
+    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 1.5; ctx.setLineDash([4,2]);
+    ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    const hw = 6;
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.moveTo(to[0], to[1]);
+    ctx.lineTo(to[0] - ux*hw + uy*hw*0.5, to[1] - uy*hw - ux*hw*0.5);
+    ctx.lineTo(to[0] - ux*hw - uy*hw*0.5, to[1] - uy*hw + ux*hw*0.5);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(239,68,68,0.8)';
+    ctx.beginPath(); ctx.arc(from[0], from[1], 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath(); ctx.arc(to[0], to[1], 4, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function getPos(e) {
+  const r = s1Canvas.getBoundingClientRect();
+  let cx = e.clientX, cy = e.clientY;
+  if (e.touches) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+  let x = cx - r.left, y = cy - r.top;
+  if (orthoEnabled && currentPts.length > 0) {
+    const lastPt = currentPts[currentPts.length - 1];
+    const dx = Math.abs(x - lastPt[0]), dy = Math.abs(y - lastPt[1]);
+    if (dx > dy) y = lastPt[1]; else x = lastPt[0];
+  }
+  if (snapEnabled) { x = Math.round(x / 20) * 20; y = Math.round(y / 20) * 20; }
+  return [x, y];
+}
+
+function toMetres(px) { return (px / SCALE / 1000).toFixed(3); }
+
+s1Canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  drawing = true;
+  const [x, y] = getPos(e);
+  currentPts = [[x, y]];
+  setStatus('Drawing ' + currentTool.toUpperCase() + ' — release to place element');
+});
+
+s1Canvas.addEventListener('mousemove', e => {
+  const [x, y] = getPos(e);
+  mouseX = x; mouseY = y;
+  document.getElementById('s1-coords').textContent = 'X: ' + parseFloat(toMetres(x)).toFixed(3) + 'm   Y: ' + parseFloat(toMetres(y)).toFixed(3) + 'm';
+  document.getElementById('coords-display').textContent = 'X: ' + parseFloat(toMetres(x)).toFixed(3) + '   Y: ' + parseFloat(toMetres(y)).toFixed(3);
+  if (drawing) { currentPts.push([x, y]); if (currentPts.length > 600) currentPts = currentPts.slice(-300); }
+  renderSketch();
+});
+
+s1Canvas.addEventListener('mouseup', e => {
+  if (!drawing) return;
+  drawing = false;
+  if (currentPts.length >= 2) {
+    historyStack.push(JSON.parse(JSON.stringify(strokes)));
+    strokes.push({ tool: currentTool, pts: [...currentPts] });
+    autoStraightenLastStroke(); // straighten + corner-correct on commit
+    const last = strokes[strokes.length - 1];
+    wsSendStroke(last);          // ← stream to BIM agent
+    scheduleAutoSync();          // ← auto-sync to hologram
+    const a = last.pts[0], b = last.pts[last.pts.length - 1];
+    const d = pxDist(a, b);
+    const mm = Math.round(d / SCALE);
+    const lenStr = mm >= 1000 ? (mm / 1000).toFixed(2) + 'm' : mm + 'mm';
+    setStatus('✓ ' + currentTool.toUpperCase() + ' placed — length: ' + lenStr + ' | ' + strokes.length + ' element' + (strokes.length !== 1 ? 's' : ''));
+    updateSidebarProps();
+    updateStatusBadge();
+    invalidateS2Cache(); // sketch changed — Stage 2 drawings need rebuild
+  }
+  currentPts = [];
+  renderSketch();
+});
+
+s1Canvas.addEventListener('mouseleave', () => { if (!drawing) { mouseX = -9999; mouseY = -9999; renderSketch(); } });
+
+s1Canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const [x, y] = getPos(e); currentPts = [[x, y]]; renderSketch(); }, { passive: false });
+s1Canvas.addEventListener('touchmove', e => { e.preventDefault(); const [x, y] = getPos(e); mouseX = x; mouseY = y; if (drawing) currentPts.push([x, y]); renderSketch(); }, { passive: false });
+s1Canvas.addEventListener('touchend', e => { e.preventDefault(); drawing = false; if (currentPts.length >= 2) { historyStack.push(JSON.parse(JSON.stringify(strokes))); strokes.push({ tool: currentTool, pts: [...currentPts] }); autoStraightenLastStroke(); wsSendStroke(strokes[strokes.length - 1]); scheduleAutoSync(); updateSidebarProps(); updateStatusBadge(); } currentPts = []; renderSketch(); }, { passive: false });
+
+// Tool selector
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentTool = btn.dataset.tool;
+    if (!TOOLS[currentTool]) return;
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateSidebarProps();
+    setStatus('Active: ' + currentTool.toUpperCase() + ' — click and drag to draw');
+    renderSketch();
+  });
+});
+
+document.getElementById('tb-undo').addEventListener('click', () => {
+  if (historyStack.length > 0) { strokes = historyStack.pop(); updateSidebarProps(); updateStatusBadge(); renderSketch(); setStatus('Undo — ' + strokes.length + ' elements'); scheduleAutoSync(); }
+});
+document.getElementById('tb-clear').addEventListener('click', () => {
+  historyStack.push(JSON.parse(JSON.stringify(strokes)));
+  strokes = []; currentPts = []; drawing = false;
+  updateSidebarProps(); updateStatusBadge(); renderSketch();
+  setStatus('Canvas cleared');
+  scheduleAutoSync();
+});
+document.getElementById('tb-snap').addEventListener('click', function() {
+  snapEnabled = !snapEnabled;
+  this.style.color = snapEnabled ? 'var(--accent)' : 'var(--text2)';
+  setStatus('Snap to grid: ' + (snapEnabled ? 'ON' : 'OFF'));
+});
+document.getElementById('tb-ortho').addEventListener('click', function() {
+  orthoEnabled = !orthoEnabled;
+  this.style.color = orthoEnabled ? 'var(--accent)' : 'var(--text2)';
+  setStatus('Ortho mode: ' + (orthoEnabled ? 'ON — constrained to H/V' : 'OFF'));
+});
+document.getElementById('tb-straight').addEventListener('click', function() {
+  autoStraightenEnabled = !autoStraightenEnabled;
+  this.classList.toggle('active', autoStraightenEnabled);
+  this.style.color = autoStraightenEnabled ? 'var(--accent)' : 'var(--text2)';
+  setStatus('Auto-Straighten: ' + (autoStraightenEnabled ? 'ON — lines snap to 45° grid, corners merged' : 'OFF — freehand kept as-is'));
+});
+document.getElementById('tb-topo').addEventListener('click', function() {
+  topoOverlayEnabled = !topoOverlayEnabled;
+  this.classList.toggle('active', topoOverlayEnabled);
+  this.style.color = topoOverlayEnabled ? 'var(--cyan)' : 'var(--text2)';
+  setStatus('Topology overlay: ' + (topoOverlayEnabled ? 'ON — corner □  T-junction ⊤  X-crossing ×  free ○' : 'OFF'));
+  renderSketch();
+});
+
+// Layer visibility toggles
+['lv-wall', 'lv-open', 'lv-struct', 'lv-grid', 'lv-dim'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', renderSketch);
+});
+
+function updateSidebarProps() {
+  document.getElementById('p-tool').textContent = currentTool.toUpperCase();
+  document.getElementById('p-count').textContent = strokes.length;
+  if (strokes.length > 0) {
+    const last = strokes[strokes.length - 1];
+    if (last.pts.length >= 2) {
+      const d = pxDist(last.pts[0], last.pts[last.pts.length - 1]);
+      const mm = Math.round(d / SCALE);
+      document.getElementById('p-len').textContent = mm >= 1000 ? (mm / 1000).toFixed(2) + ' m' : mm + ' mm';
+    }
+  }
+}
+function updateStatusBadge() {
+  document.getElementById('sb-count').textContent = strokes.length + ' element' + (strokes.length !== 1 ? 's' : '');
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { drawing = false; currentPts = []; renderSketch(); setStatus('ESC — operation cancelled'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); document.getElementById('tb-undo').click(); }
+  const toolKeys = { w: 'wall', d: 'door', v: 'window', c: 'column', s: 'slab', b: 'beam', t: 'stair', r: 'roof', i: 'dim' };
+  if (toolKeys[e.key] && !e.ctrlKey && !e.metaKey && currentStage === 1) {
+    const btn = document.querySelector('[data-tool="' + toolKeys[e.key] + '"]');
+    if (btn) btn.click();
+  }
+  if (e.key === 'Tab' && currentStage === 1) {
+    e.preventDefault();
+    const order = ['wall', 'door', 'window', 'column', 'slab', 'beam', 'stair', 'roof', 'dim'];
+    const idx = order.indexOf(currentTool);
+    const btn = document.querySelector('[data-tool="' + order[(idx + 1) % order.length] + '"]');
+    if (btn) btn.click();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 2 — TRUE 3D GeoGebra VIEWER + ISO 128 CAVALIER OBLIQUE
+//
+// Architecture:
+//   1. GeoGebra 3D applet (live math, rotatable) as primary renderer
+//   2. Canvas fallback (cavalier oblique, ISO 128-30) if GeoGebra offline
+//
+// Cavalier Oblique Projection (ISO 128-30:2001):
+//   World right-hand system: X = East, Y = North, Z = Up
+//   Screen:  sx = X + Z * cos(45°) * 0.5
+//            sy = -Y + Z * sin(45°) * 0.5   [canvas Y inverted]
+//
+// GeoGebra injected commands build Prism() solids per wall segment,
+// coloured by element type, with grid axes and dimension labels.
+//
+// References:
+//   ISO 128-30:2001 Technical drawings, orthographic multiview.
+//   ISO 128-34:2001 First-angle projection.
+//   Monge, G. (1799) Géométrie descriptive.
+//   Borrmann et al. (2018) BIM Springer Ch.5.
+// ═══════════════════════════════════════════════════════════
+
+// ── Stage 2 state ───────────────────────────────────────────
+let currentS2View = 'plan';   // plan | north | south | east | west | section_aa
+let s2Drawings    = null;     // SVG strings returned by /generate
+let s2Summary     = null;     // geometry summary from server
+
+// ── View labels for status display ──────────────────────────
+const S2_VIEW_LABELS = {
+  plan:       'Floor Plan — Level 0 (GF)  1:100',
+  north:      'North Elevation  1:100',
+  south:      'South Elevation  1:100',
+  east:       'East Elevation   1:100',
+  west:       'West Elevation   1:100',
+  section_aa: 'Section A-A  1:50',
+};
+
+// ── Extract world geometry from strokes ─────────────────────
+// ═══════════════════════════════════════════════════════════
+// STAGE 2 — Python-backed orthographic drawing viewer
+// All geometry and SVG rendering is handled by server.py /
+// ifc_builder.py / projection.py on the local BIM Core server.
+// JS only: send payload → receive SVGs → display active view.
+// ═══════════════════════════════════════════════════════════
+
+// ── Fetch drawings from Python BIM Core ─────────────────────
+async function fetchS2Drawings() {
+  const payload = buildPayload();
+  const top = payload.topology;
+  const loadEl  = document.getElementById('s2-ggb-loading');
+  const svgEl   = document.getElementById('s2-svg-display');
+  const msgEl   = document.getElementById('s2-load-msg');
+
+  if (top.wall_count === 0) {
+    // No strokes on canvas — try the agent graph (could have been populated
+    // via WebSocket strokes from a previous session).
+    try {
+      const r2 = await fetch(`${window.PIPELINE_BASE}/drawings`);
+      if (r2.ok) {
+        const d2 = await r2.json();
+        if (d2.drawings && Object.keys(d2.drawings).length > 0) {
+          s2Drawings = d2.drawings;
+          s2Summary  = d2.summary;
+          updateS2InfoPanel(s2Summary);
+          showS2View(currentS2View);
+          setStatus('✓ Drawings from agent graph — ' + d2.summary.wall_count + ' walls');
+          return;
+        }
+      }
+    } catch (_) { /* server not running */ }
+    msgEl.innerHTML = '⚠ No walls in sketch — draw walls in Stage 1 first.';
+    loadEl.style.display = 'flex';
+    svgEl.style.display  = 'none';
+    return;
+  }
+
+  msgEl.innerHTML = '⏳ Generating drawings via projection.py…';
+  loadEl.style.display = 'flex';
+  svgEl.style.display  = 'none';
+
+  try {
+    const resp = await fetch(`${window.PIPELINE_BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || resp.statusText);
+    }
+    const data = await resp.json();
+    s2Drawings = data.drawings;
+    s2Summary  = data.summary;
+    updateS2InfoPanel(s2Summary);
+    showS2View(currentS2View);
+    setStatus('✓ Drawings generated — ' + s2Summary.wall_count + ' walls, '
+      + s2Summary.opening_count + ' openings');
+  } catch (e) {
+    msgEl.innerHTML = '✗ BIM Core unreachable: ' + e.message
+      + '<br><small>Start with: <code>python3 server.py</code> on port 8767</small>';
+    loadEl.style.display = 'flex';
+    svgEl.style.display  = 'none';
+    setStatus('✗ projection.py server unreachable — ' + e.message);
+  }
+}
+
+// ── Render the active SVG view ───────────────────────────────
+function showS2View(view) {
+  const loadEl = document.getElementById('s2-ggb-loading');
+  const svgEl  = document.getElementById('s2-svg-display');
+  if (!s2Drawings || !s2Drawings[view]) return;
+
+  svgEl.innerHTML = s2Drawings[view];
+  // Make the SVG fill the container width
+  const svg = svgEl.querySelector('svg');
+  if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; svg.removeAttribute('width'); svg.removeAttribute('height'); }
+
+  loadEl.style.display = 'none';
+  svgEl.style.display  = 'block';
+
+  document.getElementById('s2-stat-view').textContent = S2_VIEW_LABELS[view] || view;
+}
+
+// ── Update info panel from server summary ───────────────────
+function updateS2InfoPanel(summary) {
+  if (!summary) return;
+  document.getElementById('s2-stat-walls').textContent  = summary.wall_count;
+  document.getElementById('s2-stat-opens').textContent  = summary.opening_count;
+  document.getElementById('s2-stat-height').textContent = summary.wall_height_m.toFixed(3) + ' m';
+  document.getElementById('s2-stat-thick').textContent  = summary.wall_thickness_mm.toFixed(0) + ' mm';
+}
+
+// ── Stage 2 entry point (called from goToStage) ─────────────
+function initStage2() {
+  // If drawings already cached for the current sketch, just show them.
+  // Otherwise show the idle prompt and let Rebuild trigger a fetch.
+  if (s2Drawings) {
+    showS2View(currentS2View);
+  } else {
+    document.getElementById('s2-load-msg').innerHTML =
+      'Click <strong>Rebuild</strong> to generate drawings from sketch…';
+    document.getElementById('s2-ggb-loading').style.display = 'flex';
+    document.getElementById('s2-svg-display').style.display  = 'none';
+  }
+}
+
+// ── Invalidate cache when sketch changes (Stage 1 strokes) ──
+function invalidateS2Cache() { s2Drawings = null; s2Summary = null; }
+
+// ── Wire up Stage 2 view tabs + Rebuild button ───────────────
+document.querySelectorAll('.s2-view-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentS2View = btn.dataset.view;
+    document.querySelectorAll('.s2-view-btn[data-view]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (s2Drawings) {
+      showS2View(currentS2View);
+    } else {
+      fetchS2Drawings();
+    }
+  });
+});
+
+document.getElementById('s2-regen-btn').addEventListener('click', () => {
+  invalidateS2Cache();
+  fetchS2Drawings();
+});
+
+function getStrokeBounds() {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  strokes.forEach(s => s.pts.forEach(([x, y]) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }));
+  return { minX: isFinite(minX) ? minX : 0, minY: isFinite(minY) ? minY : 0, maxX: isFinite(maxX) ? maxX : 100, maxY: isFinite(maxY) ? maxY : 100 };
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTO LINE STRAIGHTENER + CORNER CORRECTOR
+// Academic basis:
+//   - Angular quantization to 8-direction grid (0°/45°/90°/135°)
+//     per: DTIC "Grid-Based Line Drawing Quantization" & USPTO 7031526
+//   - Endpoint merge snapping: fuzzy grid snapping (ScienceDirect 2020)
+//   - Douglas-Peucker simplification for intermediate point reduction
+//   - Topology repair: T/X junction injection (Free2CAD, Li et al. SIGGRAPH 2022)
+//   - Wall graph traversal repair (WallPlan, Sun et al. ACM TOG 2022)
+//   - Ortho intent inference: force H/V if within threshold of axis
+//   - Opening-to-wall projection: snap door/window onto wall centreline
+// ═══════════════════════════════════════════════════════════
+
+let autoStraightenEnabled = true;
+const STRAIGHT_SNAP_ANGLE_DEG = 15; // degrees tolerance – slightly wider for novice strokes
+const CORNER_MERGE_DIST = 28;       // px – endpoints within this are merged
+const JOINT_SNAP_DIST   = 50;       // px – displacement radius for joint snapping (wider)
+const ORTHO_INTENT_DEG  = 15;       // within this of H/V → force exactly H/V
+const CROSSING_SNAP_DIST = 18;      // px – how close an endpoint must be to a wall segment to T-snap
+const OPEN_WALL_DIST    = 24;       // px – openings within this of a wall centreline get projected
+
+// ── Topology overlay state (rendered each frame) ──
+let topoNodes = [];   // [{x,y,type}] type: 'corner'|'T'|'X'|'free'
+let lastDisplacementArrows = [];
+
+// ═══════════════════════════════════════════════════════════
+// GEOMETRY PRIMITIVES
+// ═══════════════════════════════════════════════════════════
+
+/** Douglas-Peucker polyline simplification */
+function dpSimplify(pts, eps) {
+  if (pts.length <= 2) return pts;
+  let maxD = 0, idx = 0;
+  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1];
+  const len = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2) || 1;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i];
+    const d = Math.abs((by - ay) * px - (bx - ax) * py + bx * ay - by * ax) / len;
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > eps) {
+    const l = dpSimplify(pts.slice(0, idx + 1), eps);
+    const r = dpSimplify(pts.slice(idx), eps);
+    return [...l.slice(0, -1), ...r];
+  }
+  return [pts[0], pts[pts.length - 1]];
+}
+
+/** Quantize angle to nearest N*45° */
+function quantizeAngle(dx, dy) {
+  const a = Math.atan2(dy, dx) * 180 / Math.PI;
+  const snapped = Math.round(a / 45) * 45;
+  return snapped * Math.PI / 180;
+}
+
+function projectAlongAngle(ax, ay, bx, by) {
+  const dist = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+  const ang = quantizeAngle(bx - ax, by - ay);
+  return [ax + Math.cos(ang) * dist, ay + Math.sin(ang) * dist];
+}
+
+/**
+ * Scalar parameter t of the closest point on segment AB to point P.
+ * Returns t in [0,1] and the closest point coords.
+ * (Used for T-junction detection and opening projection.)
+ */
+function closestPointOnSeg(ax, ay, bx, by, px, py) {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-6) return { t: 0, x: ax, y: ay, dist: Math.hypot(px - ax, py - ay) };
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  const cx = ax + t * dx, cy = ay + t * dy;
+  return { t, x: cx, y: cy, dist: Math.hypot(px - cx, py - cy) };
+}
+
+/**
+ * classifyJunction(ax,ay,bx,by,cx,cy,dx,dy)
+ * Given two wall segments AB and CD, returns junction type at their meeting point:
+ *   'corner' – endpoints meet end-to-end
+ *   'T'      – one endpoint lands on interior of the other segment
+ *   'X'      – interior crossing
+ *   'free'   – no connection
+ * Academic basis: WallPlan (Sun et al. ACM TOG 2022), Free2CAD (Li et al. SIGGRAPH 2022)
+ */
+function classifyJunction(ax, ay, bx, by, cx, cy, dx, dy) {
+  const ix = segIntersect(ax, ay, bx, by, cx, cy, dx, dy);
+  if (ix) return { type: 'X', pt: [Math.round(ix.x), Math.round(ix.y)] };
+  const endpointsAB = [[ax, ay], [bx, by]];
+  const endpointsCD = [[cx, cy], [dx, dy]];
+  for (const [px, py] of endpointsAB) {
+    const r = closestPointOnSeg(cx, cy, dx, dy, px, py);
+    if (r.dist < CROSSING_SNAP_DIST && r.t > 0.05 && r.t < 0.95)
+      return { type: 'T', pt: [Math.round(r.x), Math.round(r.y)] };
+  }
+  for (const [px, py] of endpointsCD) {
+    const r = closestPointOnSeg(ax, ay, bx, by, px, py);
+    if (r.dist < CROSSING_SNAP_DIST && r.t > 0.05 && r.t < 0.95)
+      return { type: 'T', pt: [Math.round(r.x), Math.round(r.y)] };
+  }
+  for (const [px, py] of endpointsAB)
+    for (const [qx, qy] of endpointsCD)
+      if (Math.hypot(px - qx, py - qy) < CORNER_MERGE_DIST)
+        return { type: 'corner', pt: [Math.round((px+qx)/2), Math.round((py+qy)/2)] };
+  return { type: 'free', pt: null };
+}
+
+/**
+ * Segment-segment intersection.
+ * Returns {x, y, tA, tB} or null.
+ * (Free2CAD §3.2 / WallPlan graph traversal – crossing detection)
+ */
+function segIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+  const r = [bx - ax, by - ay];
+  const s = [dx - cx, dy - cy];
+  const rxs = r[0] * s[1] - r[1] * s[0];
+  if (Math.abs(rxs) < 1e-6) return null; // parallel
+  const t = ((cx - ax) * s[1] - (cy - ay) * s[0]) / rxs;
+  const u = ((cx - ax) * r[1] - (cy - ay) * r[0]) / rxs;
+  if (t > 1e-4 && t < 1 - 1e-4 && u > 1e-4 && u < 1 - 1e-4) {
+    return { x: ax + t * r[0], y: ay + t * r[1], tA: t, tB: u };
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ORTHO INTENT INFERENCE
+// If a wall stroke is within ORTHO_INTENT_DEG of perfectly H or V,
+// snap it to exactly H/V – preserving the engineer's intent even
+// when they drew slightly off-axis.
+// Academic basis: Free2CAD geometric fitting step (Li et al. 2022)
+// ═══════════════════════════════════════════════════════════
+function inferOrthoIntent(pts) {
+  if (pts.length < 2) return pts;
+  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1];
+  const dx = bx - ax, dy = by - ay;
+  const ang = Math.abs(Math.atan2(dy, dx) * 180 / Math.PI);
+  // near horizontal (0° or 180°)
+  if (ang < ORTHO_INTENT_DEG || ang > 180 - ORTHO_INTENT_DEG) {
+    return [[ax, ay], [bx, ay]]; // force same Y
+  }
+  // near vertical (90°)
+  if (ang > 90 - ORTHO_INTENT_DEG && ang < 90 + ORTHO_INTENT_DEG) {
+    return [[ax, ay], [ax, by]]; // force same X
+  }
+  return pts;
+}
+
+// ═══════════════════════════════════════════════════════════
+// STRAIGHTEN STROKE
+// ═══════════════════════════════════════════════════════════
+function straightenStroke(pts) {
+  if (pts.length < 2) return pts;
+  // Step 1: ortho intent – collapse near-H/V to exact H/V before D-P
+  pts = inferOrthoIntent(pts);
+  // Step 2: D-P simplify – epsilon 8px removes finger wobble
+  const simplified = dpSimplify(pts, 8);
+  if (simplified.length < 2) return [pts[0], pts[pts.length - 1]];
+  // Step 3: angle-quantize each segment, chain them
+  const result = [simplified[0]];
+  for (let i = 1; i < simplified.length; i++) {
+    const prev = result[result.length - 1];
+    const cur = simplified[i];
+    const [nx, ny] = projectAlongAngle(prev[0], prev[1], cur[0], cur[1]);
+    result.push([Math.round(nx), Math.round(ny)]);
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════
+// OPENING → WALL PROJECTION
+// Snap door/window endpoints onto the nearest wall centreline
+// so they never float off-wall in the IFC model.
+// Academic basis: IfcRelVoidsElement / IfcOpeningElement placement
+// constraint (Borrmann et al. BIM 2018, Ch.5.4)
+// ═══════════════════════════════════════════════════════════
+function projectOpeningsOntoWalls() {
+  const wallStrokes = strokes.filter(s => s.tool === 'wall' && s.pts.length >= 2);
+  strokes.forEach(s => {
+    if (s.tool !== 'door' && s.tool !== 'window') return;
+    if (!s.pts || s.pts.length < 2) return;
+    [0, s.pts.length - 1].forEach(ei => {
+      const pt = s.pts[ei];
+      let best = null, bestDist = OPEN_WALL_DIST;
+      wallStrokes.forEach(w => {
+        const a = w.pts[0], b = w.pts[w.pts.length - 1];
+        const res = closestPointOnSeg(a[0], a[1], b[0], b[1], pt[0], pt[1]);
+        if (res.dist < bestDist) { bestDist = res.dist; best = res; }
+      });
+      if (best) s.pts[ei] = [Math.round(best.x), Math.round(best.y)];
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOPOLOGY REPAIR ENGINE
+// Detects T-junctions and X-crossings between wall strokes
+// and injects the intersection point by splitting strokes.
+// This repairs floating endpoints that land on (not at the end
+// of) an existing wall, producing a proper wall graph.
+//
+// Algorithm:
+//   1. For each wall endpoint P, check if P lies within
+//      CROSSING_SNAP_DIST of any other wall segment S.
+//      If so → snap P to the nearest point on S (T-junction).
+//   2. For each pair of wall strokes, check for interior
+//      segment crossing. If found → split both strokes at
+//      the crossing point and insert the junction node (X).
+//
+// Academic basis:
+//   WallPlan (Sun et al. ACM TOG 2022) – wall graph traversal
+//   Free2CAD (Li et al. SIGGRAPH 2022) – stroke grouping + geometric correction
+// ═══════════════════════════════════════════════════════════
+function repairTopology() {
+  const wallIdx = strokes
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.tool === 'wall' && s.pts.length >= 2);
+
+  // ── Pass 1: T-junction snap ─────────────────────────────
+  // For each wall endpoint, if it lies near the INTERIOR of
+  // another wall segment, snap it to the projection point.
+  wallIdx.forEach(({ s, i }) => {
+    [0, s.pts.length - 1].forEach(ei => {
+      const pt = s.pts[ei];
+      wallIdx.forEach(({ s: other, i: oi }) => {
+        if (oi === i) return;
+        const a = other.pts[0], b = other.pts[other.pts.length - 1];
+        const res = closestPointOnSeg(a[0], a[1], b[0], b[1], pt[0], pt[1]);
+        // Only snap if point is near interior of segment (t not at ends)
+        if (res.dist < CROSSING_SNAP_DIST && res.t > 0.05 && res.t < 0.95) {
+          const snapped = [Math.round(res.x), Math.round(res.y)];
+          s.pts[ei] = snapped;
+          // Split the target wall at the T-junction point
+          splitWallAtPoint(oi, snapped);
+        }
+      });
+    });
+  });
+
+  // ── Pass 2: X-crossing split ────────────────────────────
+  // Detect interior crossings between pairs of wall strokes
+  // and split both at the intersection point.
+  const wallIdxAfter = strokes
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.tool === 'wall' && s.pts.length >= 2);
+
+  const splits = [];
+  for (let a = 0; a < wallIdxAfter.length; a++) {
+    for (let b = a + 1; b < wallIdxAfter.length; b++) {
+      const wa = wallIdxAfter[a], wb = wallIdxAfter[b];
+      const pa = wa.s.pts[0], qa = wa.s.pts[wa.s.pts.length - 1];
+      const pb = wb.s.pts[0], qb = wb.s.pts[wb.s.pts.length - 1];
+      const ix = segIntersect(pa[0], pa[1], qa[0], qa[1], pb[0], pb[1], qb[0], qb[1]);
+      if (ix) {
+        splits.push({ idx: wa.i, pt: [Math.round(ix.x), Math.round(ix.y)] });
+        splits.push({ idx: wb.i, pt: [Math.round(ix.x), Math.round(ix.y)] });
+      }
+    }
+  }
+  // Apply splits in reverse index order so indices stay valid
+  splits.sort((a, b) => b.idx - a.idx);
+  const seen = new Set();
+  splits.forEach(({ idx, pt }) => {
+    const key = idx + ':' + pt;
+    if (seen.has(key)) return;
+    seen.add(key);
+    splitWallAtPoint(idx, pt);
+  });
+
+  // ── Pass 3: Global corner merge ─────────────────────────
+  correctCorners();
+
+  // ── Pass 4: Opening projection ──────────────────────────
+  projectOpeningsOntoWalls();
+
+  // ── Pass 5: Rebuild topology overlay ───────────────────
+  rebuildTopoNodes();
+}
+
+/**
+ * Split stroke at index `idx` by inserting `pt` on its segment.
+ * The stroke [A...B] becomes [A...pt] + [pt...B].
+ * Only splits if pt is interior to the stroke (not already an endpoint).
+ */
+function splitWallAtPoint(idx, pt) {
+  if (idx < 0 || idx >= strokes.length) return;
+  const s = strokes[idx];
+  if (!s || s.tool !== 'wall' || s.pts.length < 2) return;
+  const a = s.pts[0], b = s.pts[s.pts.length - 1];
+  // Don't split if pt is already an endpoint
+  if (ptEq(pt, a) || ptEq(pt, b)) return;
+  const res = closestPointOnSeg(a[0], a[1], b[0], b[1], pt[0], pt[1]);
+  if (res.t < 0.05 || res.t > 0.95) return;
+  const snapped = [Math.round(res.x), Math.round(res.y)];
+  const half1 = { tool: 'wall', pts: [a, snapped] };
+  const half2 = { tool: 'wall', pts: [snapped, b] };
+  strokes.splice(idx, 1, half1, half2);
+}
+
+function ptEq(a, b) {
+  return Math.abs(a[0] - b[0]) < 3 && Math.abs(a[1] - b[1]) < 3;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CORNER MERGE (global, runs after topology repair)
+// ═══════════════════════════════════════════════════════════
+function correctCorners() {
+  const endpoints = [];
+  strokes.forEach((s, si) => {
+    if (!s.pts || s.pts.length < 2) return;
+    endpoints.push({ si, end: 0, pt: s.pts[0] });
+    endpoints.push({ si, end: -1, pt: s.pts[s.pts.length - 1] });
+  });
+  const merged = new Set();
+  for (let i = 0; i < endpoints.length; i++) {
+    if (merged.has(i)) continue;
+    const cluster = [i];
+    for (let j = i + 1; j < endpoints.length; j++) {
+      if (merged.has(j)) continue;
+      const dx = endpoints[i].pt[0] - endpoints[j].pt[0];
+      const dy = endpoints[i].pt[1] - endpoints[j].pt[1];
+      if (Math.sqrt(dx * dx + dy * dy) < CORNER_MERGE_DIST) {
+        cluster.push(j);
+        merged.add(j);
+      }
+    }
+    if (cluster.length > 1) {
+      const cx = cluster.reduce((s, k) => s + endpoints[k].pt[0], 0) / cluster.length;
+      const cy = cluster.reduce((s, k) => s + endpoints[k].pt[1], 0) / cluster.length;
+      const snappedX = Math.round(cx / 20) * 20;
+      const snappedY = Math.round(cy / 20) * 20;
+      cluster.forEach(k => {
+        const { si, end } = endpoints[k];
+        if (end === 0) strokes[si].pts[0] = [snappedX, snappedY];
+        else strokes[si].pts[strokes[si].pts.length - 1] = [snappedX, snappedY];
+      });
+    }
+    merged.add(i);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOPOLOGY NODE MAP (for live overlay)
+// Classifies each endpoint as corner | T | X | free
+// Visual basis: WallPlan node-type annotation
+// ═══════════════════════════════════════════════════════════
+function rebuildTopoNodes() {
+  const map = new Map();
+  const key = (x, y) => Math.round(x) + ',' + Math.round(y);
+  strokes.forEach(s => {
+    if (s.tool !== 'wall' || !s.pts || s.pts.length < 2) return;
+    [s.pts[0], s.pts[s.pts.length - 1]].forEach(p => {
+      const k = key(p[0], p[1]);
+      map.set(k, (map.get(k) || 0) + 1);
+    });
+  });
+  topoNodes = [];
+  map.forEach((count, k) => {
+    const [x, y] = k.split(',').map(Number);
+    let type = 'free';
+    if (count === 2) type = 'corner';
+    else if (count === 3) type = 'T';
+    else if (count >= 4) type = 'X';
+    topoNodes.push({ x, y, type, count });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// JOINT SNAP HELPERS
+// ═══════════════════════════════════════════════════════════
+function getExistingEndpoints(excludeIdx) {
+  const pts = [];
+  strokes.forEach((s, i) => {
+    if (i === excludeIdx) return;
+    if (!s.pts || s.pts.length < 2) return;
+    pts.push(s.pts[0]);
+    pts.push(s.pts[s.pts.length - 1]);
+  });
+  return pts;
+}
+
+function snapToNearestJoint(pt, candidates) {
+  let best = null, bestD = JOINT_SNAP_DIST;
+  candidates.forEach(c => {
+    const d = Math.hypot(pt[0] - c[0], pt[1] - c[1]);
+    if (d < bestD) { bestD = d; best = c; }
+  });
+  return best ? [best[0], best[1]] : pt;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN COMMIT PIPELINE
+// Called after every stroke commit.
+// Order: joint-snap → straighten → re-snap → topology repair
+// ═══════════════════════════════════════════════════════════
+function autoStraightenLastStroke() {
+  if (!autoStraightenEnabled) return;
+  if (strokes.length === 0) return;
+  const last = strokes[strokes.length - 1];
+  const lastIdx = strokes.length - 1;
+  const straightenTools = new Set(['wall', 'beam', 'roof', 'dim', 'stair']);
+  if (!straightenTools.has(last.tool)) return;
+
+  const joints = getExistingEndpoints(lastIdx);
+  lastDisplacementArrows = [];
+
+  // ── Step 1: Displacement-line joint snap ──────────────
+  if (joints.length > 0) {
+    const rawStart = last.pts[0];
+    const rawEnd   = last.pts[last.pts.length - 1];
+    const snapStart = snapToNearestJoint(rawStart, joints);
+    const snapEnd   = snapToNearestJoint(rawEnd, joints);
+    if (snapStart[0] !== rawStart[0] || snapStart[1] !== rawStart[1])
+      lastDisplacementArrows.push({ from: rawStart, to: snapStart });
+    if (snapEnd[0] !== rawEnd[0] || snapEnd[1] !== rawEnd[1])
+      lastDisplacementArrows.push({ from: rawEnd, to: snapEnd });
+    last.pts[0] = snapStart;
+    last.pts[last.pts.length - 1] = snapEnd;
+  }
+
+  // ── Step 2: Ortho intent + D-P + angle quantize ───────
+  last.pts = straightenStroke(last.pts);
+
+  // ── Step 3: Re-snap after angle correction ────────────
+  if (joints.length > 0) {
+    last.pts[0] = snapToNearestJoint(last.pts[0], joints);
+    last.pts[last.pts.length - 1] = snapToNearestJoint(last.pts[last.pts.length - 1], joints);
+  }
+
+  // ── Step 4: Full topology repair (T/X split + merge) ──
+  repairTopology();
+
+  if (lastDisplacementArrows.length > 0)
+    setTimeout(() => { lastDisplacementArrows = []; renderSketch(); }, 900);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ELEVATION DERIVATION ENGINE
+// Academic basis:
+//   - Wall extrusion from 2D floor plan polyline to 3D facade projection
+//     per: "3-Phase Recognition Approach to Pseudo 3D Building Generation"
+//     (arxiv 1107.3680) & US Patent 10997325 (BIM wall height rules)
+//   - Orthographic projection: project wall endpoints onto view axis
+//     (North = project onto X-axis, East = project onto Y-axis)
+//   - Façade silhouette = min/max extents of wall endpoints on view axis
+//   - Window/door positions derived from their actual drawn coordinates
+// ═══════════════════════════════════════════════════════════
+
+const WALL_HEIGHT_M = 3.0; // default storey height in metres
+
+/**
+ * Extract the outer building footprint as a set of wall segments.
+ * Returns array of {x1,y1,x2,y2} in canvas-pixel space.
+ */
+function extractWallSegments() {
+  const segs = [];
+  strokes.filter(s => s.tool === 'wall').forEach(s => {
+    const pts = s.pts;
+    for (let i = 0; i + 1 < pts.length; i += Math.max(1, pts.length - 2 < 3 ? 1 : Math.floor(pts.length / 8))) {
+      const j = Math.min(i + Math.max(1, Math.floor(pts.length / 8)), pts.length - 1);
+      segs.push({ x1: pts[i][0], y1: pts[i][1], x2: pts[j][0], y2: pts[j][1] });
+    }
+    // always include first→last segment
+    segs.push({ x1: pts[0][0], y1: pts[0][1], x2: pts[pts.length - 1][0], y2: pts[pts.length - 1][1] });
+  });
+  return segs;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * ELEVATION DERIVATION — FULL 3D CARTESIAN PROJECTION
+ *
+ * Mathematical basis (from academic sources):
+ *
+ * 1. WORLD COORDINATE SYSTEM (right-hand, Z-up):
+ *    Canvas pixel (px, py) → World (X, Y, Z):
+ *      X = (px - bounds.minX) * SCALE        [metres, East]
+ *      Y = (py - bounds.minY) * SCALE        [metres, North]  (canvas Y flips: North = -py)
+ *      Z = 0..WALL_HEIGHT_M                  [metres, Up]
+ *
+ * 2. ORTHOGRAPHIC PROJECTION:
+ *    North elevation  (looking South, -Y direction):
+ *      u = X,  v = Z   → plan X becomes elev horizontal, Z becomes vertical
+ *    South elevation  (looking North, +Y direction):
+ *      u = -X, v = Z   → mirrored
+ *    East elevation   (looking West, -X direction):
+ *      u = Y,  v = Z   → plan Y becomes elev horizontal
+ *    West elevation   (looking East, +X direction):
+ *      u = -Y, v = Z
+ *
+ * 3. SILHOUETTE CONSTRUCTION:
+ *    For a given view direction D, the silhouette is the boundary of the
+ *    union of all wall segment projections onto the view plane.
+ *    Algorithm: collect all endpoint u-coordinates, sort, build
+ *    a stepped polygon:  bottom-left → top-left → top-right → bottom-right
+ *    for the full bounding extent. For the stepped version we use the
+ *    convex outline of projected u-extents per wall.
+ *
+ *    Source: "3-Phase Recognition Approach to Pseudo 3D Building Generation
+ *    from 2D Vector Floor Plan", arxiv 1107.3680 §2.
+ *    US Patent 10997325 (BIM wall extrusion height rules).
+ *
+ * 4. WALL THICKNESS IN ELEVATION:
+ *    Each wall stroke has thickness WTHICK px on canvas. When projected,
+ *    the wall contributes a minimum visible width = max(WTHICK*sc, MIN_WALL_PX).
+ *
+ * 5. STEPPED PROFILE:
+ *    Walls at different depths create setbacks in the facade.
+ *    We approximate by sorting wall u-extents and building the outer
+ *    convex silhouette polygon.
+ * ═══════════════════════════════════════════════════════════
+ */
+
+const MIN_WALL_PX = 4; // min visible wall width in elevation (px)
+
+/**
+ * getAllWallPoints3D():
+ * Convert all wall stroke endpoints into 3D world coords.
+ * Canvas → World:  X = (canvasPx - minX)*SCALE/1000 [m]
+ *                  Y = (canvasPy - minY)*SCALE/1000 [m]
+ *                  Z ∈ {0, WALL_HEIGHT_M}
+ * Returns array of {x,y} in canvas-pixel space (3D is implicit — Z from 0 to wallH).
+ */
+function getAllWallEndpoints() {
+  const pts = [];
+  strokes.filter(s => s.tool === 'wall').forEach(s => {
+    if (s.pts.length >= 2) {
+      pts.push(s.pts[0]);
+      pts.push(s.pts[s.pts.length - 1]);
+      // also add intermediate simplified points for curved walls
+      if (s.pts.length > 4) {
+        const step = Math.ceil(s.pts.length / 6);
+        for (let i = step; i < s.pts.length - 1; i += step) pts.push(s.pts[i]);
+      }
+    }
+  });
+  return pts;
+}
+
+/**
+ * buildElevationProfile(axis, bounds):
+ * axis = 'x'  → North/South elevation: project wall extents onto X axis
+ * axis = 'y'  → East/West elevation:   project wall extents onto Y axis
+ *
+ * Returns sorted array of {u1, u2} segments (in canvas pixels) representing
+ * the building's projected silhouette intervals on the chosen axis.
+ * Overlapping intervals are merged (union).
+ */
+function buildElevationProfile(axis, bounds) {
+  // Collect all individual wall SEGMENT intervals (not per-stroke extremes).
+  // Each consecutive pair of points in a wall stroke is one segment.
+  // We project each segment onto the chosen axis and record its interval.
+  // Near-orthogonal walls (perpendicular to view) still contribute their
+  // WALL_THICKNESS to the silhouette.
+  const WALL_THICK_PX = Math.max(12, 6 / (SCALE / 0.05)); // wall thickness in canvas px
+  const segs = [];
+
+  strokes.filter(s => s.tool === 'wall').forEach(s => {
+    if (s.pts.length < 2) return;
+    // Per-segment projection
+    for (let i = 0; i < s.pts.length - 1; i++) {
+      const ua = axis === 'x' ? s.pts[i][0]     : s.pts[i][1];
+      const ub = axis === 'x' ? s.pts[i+1][0]   : s.pts[i+1][1];
+      let u1 = Math.min(ua, ub), u2 = Math.max(ua, ub);
+      // Every segment gets at least WALL_THICK_PX width in elevation
+      // (represents physical wall thickness even when nearly perpendicular to view)
+      if (u2 - u1 < WALL_THICK_PX) {
+        const mid = (u1 + u2) / 2;
+        u1 = mid - WALL_THICK_PX / 2;
+        u2 = mid + WALL_THICK_PX / 2;
+      }
+      segs.push([u1, u2]);
+    }
+    // Also add full stroke extent so continuous walls project correctly
+    const allU = s.pts.map(p => axis === 'x' ? p[0] : p[1]);
+    segs.push([Math.min(...allU), Math.max(...allU)]);
+  });
+
+  if (segs.length === 0) return [];
+
+  // Merge overlapping intervals (union sweep)
+  segs.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  segs.forEach(([a, b]) => {
+    if (merged.length === 0 || a > merged[merged.length - 1][1] + WALL_THICK_PX * 0.5) {
+      merged.push([a, b]);
+    } else {
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], b);
+    }
+  });
+  return merged;
+}
+
+/**
+ * drawElevationCore(ctx, W, H, bounds, axis, label, sc_user):
+ *
+ * Generic function for any orthographic elevation.
+ *  axis   = 'x' → North (or South) elevation
+ *  axis   = 'y' → East  (or West)  elevation
+ *  flip   = true → mirror the u-axis (South/West views)
+ *
+ * Layout in canvas space:
+ *   groundY = H - margin - 20
+ *   topY    = groundY - drawH
+ *   drawH   = WALL_HEIGHT_M / (SCALE/1000) * elevSc  [canvas px at elevation scale]
+ *   drawW   = (bldgExtent in axis) * elevSc
+ *   elevSc  = fit-to-viewport scale factor
+ *
+ * The silhouette polygon is built from the merged profile segments.
+ * Openings (windows/doors) are projected onto the same axis and placed
+ * at their correct horizontal position in the elevation.
+ */
+function drawElevationCore(ctx, W, H, bounds, axis, label, flip) {
+  const margin = 40;
+  const axisMin = axis === 'x' ? bounds.minX : bounds.minY;
+  const axisMax = axis === 'x' ? bounds.maxX : bounds.maxY;
+  const bldgSpan = axisMax - axisMin || 1;
+
+  // Wall height in canvas pixels: height_mm * px_per_mm
+  // SCALE = 0.05 px/mm  →  3000mm * 0.05 = 150px
+  const wallHpx1 = WALL_HEIGHT_M * 1000 * SCALE;
+
+  // Fit both span and height into the viewport
+  const availW = W - margin * 2 - 30; // 30px for dim chain on left
+  const availH = H - margin * 2 - 30;
+  const scSpan  = availW / bldgSpan;
+  const scHeight = availH / wallHpx1;
+  const elevSc = Math.min(scSpan, scHeight, 1.8); // never magnify beyond 1.8×
+
+  const drawH = wallHpx1 * elevSc;
+  const drawW = bldgSpan * elevSc;
+  const startX = margin + 30 + (availW - drawW) / 2; // centred, 30px gap for dims
+  const groundY = H - margin - 20;
+  const topY = groundY - drawH;
+
+  // ── Ground + GL line ──────────────────────────────────────
+  // Ground hatch
+  ctx.save();
+  ctx.fillStyle = '#b0a898';
+  ctx.fillRect(margin + 28, groundY, W - margin - 28, 6);
+  for (let x = margin + 28; x < W - margin; x += 7) {
+    ctx.strokeStyle = 'rgba(80,60,40,0.3)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, groundY + 6); ctx.lineTo(x - 5, groundY + 14); ctx.stroke();
+  }
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(margin + 28, groundY); ctx.lineTo(W - margin, groundY); ctx.stroke();
+
+  // ── Build silhouette profile ──────────────────────────────
+  const profile = buildElevationProfile(axis, bounds);
+
+  if (profile.length === 0) { ctx.restore(); return; }
+
+  // ── Draw stepped façade silhouette ────────────────────────
+  // Each merged interval becomes a vertical bay in the elevation
+  ctx.fillStyle = 'rgba(210,205,195,0.70)';
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+
+  // Build the outer silhouette as a single closed polygon
+  // using all merged profile segments
+  const totalU1 = profile[0][0];
+  const totalU2 = profile[profile.length - 1][1];
+
+  // Map u (canvas px) → elevation x (canvas px)
+  function uToEx(u) {
+    const norm = (u - axisMin) / bldgSpan;
+    const mapped = flip ? (1 - norm) : norm;
+    return startX + mapped * drawW;
+  }
+
+  // Full silhouette polygon
+  ctx.beginPath();
+  ctx.moveTo(uToEx(totalU1), groundY);
+  // Step up on left edge
+  ctx.lineTo(uToEx(totalU1), topY);
+  // Walk along top with setbacks for gaps between segments
+  profile.forEach(([u1, u2], i) => {
+    ctx.lineTo(uToEx(u1), topY);
+    ctx.lineTo(uToEx(u2), topY);
+    if (i < profile.length - 1) {
+      // Setback: drop to ground in gap, come back up
+      const nextU1 = profile[i + 1][0];
+      if (nextU1 - u2 > 4) {
+        ctx.lineTo(uToEx(u2), groundY);
+        ctx.lineTo(uToEx(nextU1), groundY);
+        ctx.lineTo(uToEx(nextU1), topY);
+      }
+    }
+  });
+  ctx.lineTo(uToEx(totalU2), topY);
+  ctx.lineTo(uToEx(totalU2), groundY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // ── Outer bounding box (bold) ─────────────────────────────
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+  ctx.strokeRect(uToEx(totalU1), topY, uToEx(totalU2) - uToEx(totalU1), drawH);
+
+  // ── Wall finish hatching (thin diagonal lines on facade) ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(uToEx(totalU1), topY, uToEx(totalU2) - uToEx(totalU1), drawH);
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(150,140,130,0.18)'; ctx.lineWidth = 0.6;
+  for (let d = -drawH; d < drawW; d += 18) {
+    ctx.beginPath();
+    ctx.moveTo(uToEx(totalU1) + d, topY);
+    ctx.lineTo(uToEx(totalU1) + d + drawH, topY + drawH);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Roof silhouette ───────────────────────────────────────
+  // Pitched roof: ridge at midpoint, height proportional to building span
+  const ridgeU = (totalU1 + totalU2) / 2;
+  const ridgeH = Math.min(drawH * 0.30, drawW * 0.18, 50);
+  ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2;
+  ctx.fillStyle = 'rgba(175,170,160,0.50)';
+  ctx.beginPath();
+  ctx.moveTo(uToEx(totalU1) - 6, topY);
+  ctx.lineTo(uToEx(ridgeU), topY - ridgeH);
+  ctx.lineTo(uToEx(totalU2) + 6, topY);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Eave fascia
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(uToEx(totalU1) - 8, topY);
+  ctx.lineTo(uToEx(totalU2) + 8, topY);
+  ctx.stroke();
+
+  // ── Windows (projected onto elevation axis) ───────────────
+  strokes.filter(s => s.tool === 'window').forEach(w => {
+    const u = axis === 'x' ? w.pts[0][0] : w.pts[0][1];
+    if (u < axisMin - 10 || u > axisMax + 10) return;
+    const ex = uToEx(u);
+    const wyT = topY + drawH * 0.20;
+    const ww = Math.max(24, Math.min(52, drawW * 0.09));
+    const wh = drawH * 0.35;
+    // Reveal shadow
+    ctx.fillStyle = 'rgba(60,80,100,0.15)';
+    ctx.fillRect(ex - ww / 2 - 2, wyT - 2, ww + 4, wh + 4);
+    // Glass
+    ctx.fillStyle = '#c2dcea';
+    ctx.strokeStyle = '#3a5a72'; ctx.lineWidth = 1.2;
+    ctx.fillRect(ex - ww / 2, wyT, ww, wh);
+    ctx.strokeRect(ex - ww / 2, wyT, ww, wh);
+    // Mullion
+    ctx.beginPath(); ctx.moveTo(ex, wyT + 2); ctx.lineTo(ex, wyT + wh - 2); ctx.stroke();
+    ctx.strokeStyle = '#8ab'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(ex - ww / 2 + 2, wyT + wh * 0.5);
+    ctx.lineTo(ex + ww / 2 - 2, wyT + wh * 0.5); ctx.stroke();
+    // Sill
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ex - ww / 2 - 4, wyT + wh);
+    ctx.lineTo(ex + ww / 2 + 4, wyT + wh);
+    ctx.stroke();
+  });
+
+  // ── Doors (projected onto elevation axis) ─────────────────
+  strokes.filter(s => s.tool === 'door').forEach(d => {
+    const u = axis === 'x' ? d.pts[0][0] : d.pts[0][1];
+    if (u < axisMin - 10 || u > axisMax + 10) return;
+    const ex = uToEx(u);
+    const dw = Math.max(20, Math.min(40, drawW * 0.07));
+    const dh = drawH * 0.58;
+    // Reveal
+    ctx.fillStyle = 'rgba(60,40,20,0.12)';
+    ctx.fillRect(ex - dw / 2 - 2, groundY - dh - 2, dw + 4, dh + 2);
+    // Door leaf
+    ctx.fillStyle = '#d8cc9a';
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1.2;
+    ctx.fillRect(ex - dw / 2, groundY - dh, dw, dh);
+    ctx.strokeRect(ex - dw / 2, groundY - dh, dw, dh);
+    // Panel
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 0.7;
+    ctx.strokeRect(ex - dw / 2 + 3, groundY - dh + 4, dw - 6, dh * 0.55);
+    // Threshold
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ex - dw / 2 - 3, groundY);
+    ctx.lineTo(ex + dw / 2 + 3, groundY);
+    ctx.stroke();
+  });
+
+  // ── Dimension chain ───────────────────────────────────────
+  // Vertical: wall height
+  const dimX = margin + 18;
+  ctx.strokeStyle = '#777'; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(dimX, topY); ctx.lineTo(dimX, groundY); ctx.stroke();
+  ctx.setLineDash([]);
+  // Extension lines
+  ctx.strokeStyle = '#777'; ctx.lineWidth = 0.6;
+  ctx.beginPath(); ctx.moveTo(dimX - 4, topY); ctx.lineTo(uToEx(totalU1) - 2, topY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(dimX - 4, groundY); ctx.lineTo(uToEx(totalU1) - 2, groundY); ctx.stroke();
+  // Arrow ticks
+  [[dimX, topY, 1], [dimX, groundY, -1]].forEach(([ax, ay, d]) => {
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(ax - 3, ay + d * 5); ctx.lineTo(ax, ay); ctx.lineTo(ax + 3, ay + d * 5);
+    ctx.stroke();
+  });
+  ctx.font = 'bold 8px Courier New'; ctx.fillStyle = '#444'; ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(dimX - 8, (topY + groundY) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(WALL_HEIGHT_M.toFixed(3) + ' m', 0, 0);
+  ctx.restore();
+
+  // Horizontal: building width in this view
+  const dimY2 = groundY + 16;
+  ctx.strokeStyle = '#777'; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(uToEx(totalU1), dimY2); ctx.lineTo(uToEx(totalU2), dimY2); ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrow ticks horizontal
+  [[uToEx(totalU1), dimY2, 1], [uToEx(totalU2), dimY2, -1]].forEach(([ax, ay, d]) => {
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(ax + d * 5, ay - 3); ctx.lineTo(ax, ay); ctx.lineTo(ax + d * 5, ay + 3);
+    ctx.stroke();
+  });
+  const spanM = ((totalU2 - totalU1) / SCALE / 1000).toFixed(3);
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#444'; ctx.textAlign = 'center';
+  ctx.fillText(spanM + ' m', (uToEx(totalU1) + uToEx(totalU2)) / 2, dimY2 + 10);
+
+  // ── Level markers ─────────────────────────────────────────
+  // GL
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#333'; ctx.textAlign = 'left';
+  const glSymX = uToEx(totalU2) + 10;
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 0.7;
+  ctx.beginPath(); ctx.moveTo(glSymX, groundY); ctx.lineTo(glSymX + 16, groundY); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(glSymX + 16, groundY); ctx.lineTo(glSymX + 12, groundY - 5);
+  ctx.lineTo(glSymX + 16, groundY); ctx.lineTo(glSymX + 12, groundY + 5);
+  ctx.fillStyle = '#555'; ctx.fill();
+  ctx.fillText('±0.000', glSymX + 18, groundY + 3);
+  // FL
+  ctx.beginPath(); ctx.moveTo(glSymX, topY); ctx.lineTo(glSymX + 16, topY); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(glSymX + 16, topY); ctx.lineTo(glSymX + 12, topY - 5);
+  ctx.lineTo(glSymX + 16, topY); ctx.lineTo(glSymX + 12, topY + 5);
+  ctx.fill();
+  ctx.fillText('+' + WALL_HEIGHT_M.toFixed(3), glSymX + 18, topY + 3);
+
+  ctx.restore();
+}
+
+/**
+ * drawNorthElevationDerived: orthographic projection along -Y (looking South)
+ * u-axis = World X = canvas X  →  left=West, right=East
+ */
+function drawNorthElevationDerived(ctx, W, H, bounds) {
+  drawElevationCore(ctx, W, H, bounds, 'x', 'North', false);
+}
+
+/**
+ * drawSouthElevationDerived: orthographic projection along +Y (looking North)
+ * u-axis = -World X (mirrored)
+ */
+function drawSouthElevationDerived(ctx, W, H, bounds) {
+  drawElevationCore(ctx, W, H, bounds, 'x', 'South', true);
+}
+
+/**
+ * drawEastElevationDerived: orthographic projection along -X (looking West)
+ * u-axis = World Y = canvas Y  →  left=North, right=South
+ */
+function drawEastElevationDerived(ctx, W, H, bounds) {
+  drawElevationCore(ctx, W, H, bounds, 'y', 'East', false);
+}
+
+/**
+ * drawWestElevationDerived: orthographic projection along +X (looking East)
+ * u-axis = -World Y (mirrored)
+ */
+function drawWestElevationDerived(ctx, W, H, bounds) {
+  drawElevationCore(ctx, W, H, bounds, 'y', 'West', true);
+}
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 3 — BLUEPRINT
+// ═══════════════════════════════════════════════════════════
+const s3Canvas = document.getElementById('s3-canvas');
+const s3ctx = s3Canvas.getContext('2d');
+
+function resizeBlueprintCanvas() {
+  const frame = document.getElementById('s3-canvas-frame');
+  s3Canvas.width = frame.clientWidth;
+  s3Canvas.height = frame.clientHeight;
+  s3Canvas.style.width = frame.clientWidth + 'px';
+  s3Canvas.style.height = frame.clientHeight + 'px';
+  renderBlueprint();
+}
+new ResizeObserver(resizeBlueprintCanvas).observe(document.getElementById('s3-canvas-frame'));
+
+document.getElementById('s3-regen').addEventListener('click', renderBlueprint);
+
+function renderBlueprint() {
+  const W = s3Canvas.width, H = s3Canvas.height;
+  const ctx = s3ctx;
+  ctx.clearRect(0, 0, W, H);
+
+  // Blueprint paper background
+  ctx.fillStyle = '#f8f4eb';
+  ctx.fillRect(0, 0, W, H);
+
+  const margin = 30;
+  const innerW = W - margin * 2;
+  const innerH = H - margin * 2;
+
+  // Border frame
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(margin, margin, innerW, innerH);
+
+  // Thin inner border
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(margin + 4, margin + 4, innerW - 8, innerH - 8);
+
+  // Grid
+  ctx.save();
+  ctx.setLineDash([3, 5]);
+  for (let x = margin; x < W - margin; x += 40) {
+    ctx.beginPath(); ctx.strokeStyle = 'rgba(0,0,200,0.07)'; ctx.lineWidth = 0.3;
+    ctx.moveTo(x, margin); ctx.lineTo(x, H - margin); ctx.stroke();
+  }
+  for (let y = margin; y < H - margin; y += 40) {
+    ctx.beginPath(); ctx.strokeStyle = 'rgba(0,0,200,0.07)'; ctx.lineWidth = 0.3;
+    ctx.moveTo(margin, y); ctx.lineTo(W - margin, y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  if (strokes.length === 0) {
+    ctx.font = '11px Courier New'; ctx.fillStyle = '#bbb'; ctx.textAlign = 'center';
+    ctx.fillText('← Draw elements in Stage 1, then return here', W / 2, H / 2);
+    drawBlueprintTitleBlock(ctx, W, H);
+    return;
+  }
+
+  const bounds = getStrokeBounds();
+  const bMargin = 55;
+  const scaleX = (innerW - bMargin * 2) / (bounds.maxX - bounds.minX || 1);
+  const scaleY = (innerH - bMargin * 2) / (bounds.maxY - bounds.minY || 1);
+  const sc = Math.min(scaleX, scaleY, 1.8);
+  const offX = margin + bMargin + (innerW - bMargin * 2 - (bounds.maxX - bounds.minX) * sc) / 2;
+  const offY = margin + bMargin + (innerH - bMargin * 2 - (bounds.maxY - bounds.minY) * sc) / 2;
+
+  function tx(x) { return offX + (x - bounds.minX) * sc; }
+  function ty(y) { return offY + (y - bounds.minY) * sc; }
+
+  // Draw walls first (double line technical style)
+  const wallStrokes = strokes.filter(s => s.tool === 'wall');
+  wallStrokes.forEach(s => {
+    if (!s.pts || s.pts.length < 2) return;
+    const pts2 = s.pts.map(p => [tx(p[0]), ty(p[1])]);
+
+    if (document.getElementById('cfg-hatch') && document.getElementById('cfg-hatch').checked) {
+      ctx.save();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 4;
+      ctx.lineCap = 'square'; ctx.lineJoin = 'miter';
+      ctx.beginPath(); ctx.moveTo(pts2[0][0], pts2[0][1]);
+      for (let i = 1; i < pts2.length; i++) ctx.lineTo(pts2[i][0], pts2[i][1]);
+      ctx.stroke();
+      // hatch fill
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(pts2[0][0], pts2[0][1]);
+      for (let i = 1; i < pts2.length; i++) ctx.lineTo(pts2[i][0], pts2[i][1]);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(pts2[0][0], pts2[0][1]);
+      for (let i = 1; i < pts2.length; i++) ctx.lineTo(pts2[i][0], pts2[i][1]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  // Other elements
+  strokes.filter(s => s.tool !== 'wall').forEach(s => {
+    if (!s.pts || s.pts.length < 2) return;
+    const td = TOOLS[s.tool] || TOOLS.wall;
+    const pts2 = s.pts.map(p => [tx(p[0]), ty(p[1])]);
+
+    ctx.save();
+    ctx.strokeStyle = s.tool === 'dim' ? '#2244aa' : '#333';
+    ctx.lineWidth = s.tool === 'dim' ? 0.6 : 1.2;
+    if (s.tool === 'dim') ctx.setLineDash([5, 3]);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    if (s.tool === 'column') {
+      const x = pts2[0][0], y = pts2[0][1], sz = 8;
+      ctx.fillStyle = '#888';
+      ctx.fillRect(x - sz / 2, y - sz / 2, sz, sz);
+      ctx.strokeRect(x - sz / 2, y - sz / 2, sz, sz);
+    } else {
+      ctx.beginPath(); ctx.moveTo(pts2[0][0], pts2[0][1]);
+      for (let i = 1; i < pts2.length; i++) ctx.lineTo(pts2[i][0], pts2[i][1]);
+      ctx.stroke();
+    }
+
+    // Dim annotation
+    if (s.tool === 'dim' && pts2.length >= 2) {
+      const a = pts2[0], b = pts2[pts2.length - 1];
+      const d = pxDist(a, b);
+      const mm = Math.round(d / sc / SCALE);
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 8;
+      ctx.setLineDash([]);
+      ctx.font = '7px Courier New'; ctx.fillStyle = '#2244aa'; ctx.textAlign = 'center';
+      ctx.fillText(mm >= 1000 ? (mm / 1000).toFixed(2) + 'm' : mm + 'mm', mx, my);
+      [a, b].forEach(p => {
+        const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) + Math.PI / 2;
+        ctx.strokeStyle = '#2244aa'; ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(p[0] + Math.cos(ang) * 5, p[1] + Math.sin(ang) * 5);
+        ctx.lineTo(p[0] - Math.cos(ang) * 5, p[1] - Math.sin(ang) * 5);
+        ctx.stroke();
+      });
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+
+  // Gridlines (structural)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,80,200,0.12)'; ctx.lineWidth = 0.5; ctx.setLineDash([8, 4]);
+  const columns = strokes.filter(s => s.tool === 'column');
+  columns.forEach(col => {
+    const cx = tx(col.pts[0][0]), cy = ty(col.pts[0][1]);
+    ctx.beginPath(); ctx.moveTo(cx, margin); ctx.lineTo(cx, H - margin); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(margin, cy); ctx.lineTo(W - margin, cy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#335'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, margin + 10, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.font = '7px Courier New'; ctx.fillStyle = '#335'; ctx.textAlign = 'center';
+    ctx.fillText('A', cx, margin + 13);
+    ctx.setLineDash([8, 4]);
+    ctx.strokeStyle = 'rgba(0,80,200,0.12)'; ctx.lineWidth = 0.5;
+  });
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  drawBlueprintTitleBlock(ctx, W, H);
+  document.getElementById('s3-status').textContent = 'Technical drawing — ' + document.getElementById('cfg-scale').value + ' | ' + strokes.length + ' elements — KarlCON';
+}
+
+function drawBlueprintTitleBlock(ctx, W, H) {
+  const margin = 30;
+  const tbH = 36;
+  const tbY = H - margin - tbH;
+
+  ctx.save();
+  ctx.fillStyle = '#e8e4d8'; ctx.fillRect(margin + 4, tbY, W - margin * 2 - 8, tbH);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 0.8;
+  ctx.strokeRect(margin + 4, tbY, W - margin * 2 - 8, tbH);
+
+  // vertical dividers
+  const divX1 = margin + (W - margin * 2) * 0.45;
+  const divX2 = margin + (W - margin * 2) * 0.72;
+  [divX1, divX2].forEach(x => {
+    ctx.beginPath(); ctx.moveTo(x, tbY); ctx.lineTo(x, H - margin - 4); ctx.stroke();
+  });
+
+  ctx.font = 'bold 9px Courier New'; ctx.fillStyle = '#222'; ctx.textAlign = 'left';
+  const projTitle = document.getElementById('cfg-proj-title') ? document.getElementById('cfg-proj-title').value : 'KarlCON_Site_A';
+  ctx.fillText(projTitle, margin + 10, tbY + 14);
+
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#555';
+  const dtype = document.getElementById('cfg-dtype') ? document.getElementById('cfg-dtype').value : 'Construction';
+  ctx.fillText(dtype + ' Drawing', margin + 10, tbY + 27);
+
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#333';
+  ctx.textAlign = 'center';
+  ctx.fillText('KarlCON Consultancy', (margin + divX1) / 2 + margin / 2, tbY + 14);
+  ctx.font = '7px Courier New'; ctx.fillStyle = '#777';
+  ctx.fillText('Zimbabwe', (margin + divX1) / 2 + margin / 2, tbY + 25);
+
+  const scaleVal = document.getElementById('cfg-scale') ? document.getElementById('cfg-scale').value : '1:100';
+  ctx.font = '8px Courier New'; ctx.fillStyle = '#333'; ctx.textAlign = 'center';
+  ctx.fillText('Scale: ' + scaleVal, (divX1 + divX2) / 2, tbY + 14);
+  ctx.fillText('Dwg No: A-101', (divX1 + divX2) / 2, tbY + 25);
+
+  ctx.textAlign = 'center';
+  ctx.fillText('Date: ' + new Date().toLocaleDateString(), (divX2 + W - margin) / 2, tbY + 14);
+  ctx.fillText('Rev: 00', (divX2 + W - margin) / 2, tbY + 25);
+
+  // north arrow (in drawing area)
+  const nx = W - margin - 16, ny = tbY - 25;
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(nx, ny + 12); ctx.lineTo(nx, ny - 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(nx - 5, ny - 6); ctx.lineTo(nx, ny - 12); ctx.lineTo(nx + 5, ny - 6); ctx.closePath();
+  ctx.fillStyle = '#333'; ctx.fill();
+  ctx.font = '7px sans-serif'; ctx.fillStyle = '#333'; ctx.textAlign = 'center';
+  ctx.fillText('N', nx, ny + 20);
+  ctx.restore();
+}
+
+// Wall type selection
+document.querySelectorAll('.wt-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.wt-item').forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+  });
+});
+
+// Config change triggers blueprint redraw
+document.querySelectorAll('.cfg-input, .cfg-select').forEach(el => {
+  el.addEventListener('change', () => { if (currentStage === 3) renderBlueprint(); });
+});
+document.getElementById('cfg-hatch').addEventListener('change', () => { if (currentStage === 3) renderBlueprint(); });
+
+// ═══════════════════════════════════════════════════════════
+// STAGE 4 — PARSER / BIM
+// ═══════════════════════════════════════════════════════════
+function buildPayload() {
+  const wtype = document.querySelector('.wt-item.selected')?.dataset.wtype || 'EW230';
+  const wallH = parseFloat((document.getElementById('cfg-wh')?.value || '3.000').replace(/[^0-9.]/g, '')) || 3.0;
+  const floorH = parseFloat((document.getElementById('cfg-fh')?.value || '3.000').replace(/[^0-9.]/g, '')) || 3.0;
+  const concrete = document.getElementById('cfg-concrete')?.value || 'C25/30';
+  const stories = parseInt(document.getElementById('cfg-stories')?.value || '2') || 2;
+  const projTitle = document.getElementById('cfg-proj-title')?.value || 'KarlCON_Site_A';
+
+  const payload = {
+    version: '5.0.0',
+    pipeline: 'sketch_to_bim',
+    project: {
+      title: projTitle,
+      site: 'KarlCON Zimbabwe',
+      date: new Date().toISOString(),
+      scale: document.getElementById('cfg-scale')?.value || '1:100',
+      drawing_type: document.getElementById('cfg-dtype')?.value || 'Construction',
+    },
+    structural_config: {
+      wall_height_m: wallH,
+      floor_height_m: floorH,
+      storey_count: stories,
+      slab_thickness_m: parseFloat((document.getElementById('cfg-slab')?.value || '0.200').replace(/[^0-9.]/g, '')) || 0.2,
+      concrete_grade: concrete,
+      rebar_grade: 'Y460',
+      foundation_type: 'Strip Foundation',
+      default_wall_type: wtype,
+    },
+    strokes: strokes.map((s, i) => {
+      const td = TOOLS[s.tool] || TOOLS.wall;
+      const a = s.pts[0];
+      const b = s.pts[s.pts.length - 1];
+      const len_mm = Math.round(pxDist(a, b) / SCALE);
+      return {
+        id: 'E' + String(i + 1).padStart(4, '0'),
+        tool: s.tool,
+        ifc_type: td.ifcType,
+        family: td.family,
+        type_key: td.typeKey,
+        length_mm: len_mm,
+        points: s.pts.map(p => [Math.round(p[0]), Math.round(p[1])]),
+        // Tells the Python layer these are raw canvas-px integers so it can
+        // apply canvas_to_world_m() before inserting into the plan graph.
+        coord_space: 'canvas_px',
+        attributes: {
+          wall_height_m: wallH,
+          material: concrete,
+          wall_type: wtype,
+        },
+      };
+    }),
+    topology: {
+      wall_count: strokes.filter(s => s.tool === 'wall').length,
+      door_count: strokes.filter(s => s.tool === 'door').length,
+      window_count: strokes.filter(s => s.tool === 'window').length,
+      column_count: strokes.filter(s => s.tool === 'column').length,
+      beam_count: strokes.filter(s => s.tool === 'beam').length,
+      slab_count: strokes.filter(s => s.tool === 'slab').length,
+      total_elements: strokes.length,
+    },
+    pipeline_args: {
+      mode: 'websocket',
+      ws_port: 8768,
+      rest_port: 8767,
+      command: 'python server.py',
+      ws_command: 'python karlcon_plan_integrated.py --server --port 8768',
+    },
+  };
+
+  renderPayloadJSON(payload);
+  renderStatsPanel(payload);
+  renderFlagsPanel(payload);
+  return payload;
+}
+
+function renderPayloadJSON(obj) {
+  const area = document.getElementById('s4-json-area');
+  area.innerHTML = syntaxHighlight(JSON.stringify(obj, null, 2));
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="json-str">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="json-bool">$1</span>')
+    .replace(/: (null)/g, ': <span class="json-null">$1</span>')
+    .replace(/([{}\[\]])/g, '<span class="json-brace">$1</span>');
+}
+
+function renderStatsPanel(p) {
+  const container = document.getElementById('s4-stat-cards');
+  const top = p.topology;
+  const statsData = [
+    { icon: 'fa-solid fa-minus',       color: '#e0e0e0', bg: 'rgba(224,224,224,0.15)', num: top.wall_count,    label: 'Walls' },
+    { icon: 'fa-solid fa-circle-dot',  color: '#e0c060', bg: 'rgba(224,192,96,0.15)',  num: top.column_count,  label: 'Columns' },
+    { icon: 'fa-solid fa-layer-group', color: '#a0a0c8', bg: 'rgba(160,160,200,0.15)', num: top.slab_count,    label: 'Slabs' },
+    { icon: 'fa-solid fa-hashtag',     color: '#80c080', bg: 'rgba(128,192,128,0.15)', num: top.total_elements, label: 'Total Elements' },
+  ];
+  container.innerHTML = statsData.map(s => `
+    <div class="stat-card">
+      <div class="stat-icon" style="background:${s.bg}">
+        <i class="${s.icon}" style="color:${s.color}"></i>
+      </div>
+      <div class="stat-info">
+        <div class="stat-num">${s.num}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFlagsPanel(p) {
+  const container = document.getElementById('s4-flags');
+  const flags = [];
+
+  if (p.topology.total_elements === 0) {
+    flags.push({ type: 'err', text: 'No elements drawn', code: 'E001: empty_sketch' });
+  } else {
+    flags.push({ type: 'ok', text: p.topology.total_elements + ' elements serialized', code: 'I001: ready' });
+  }
+  if (p.topology.wall_count === 0) {
+    flags.push({ type: 'warn', text: 'No wall elements — BIM extrusion may be incomplete', code: 'W001: no_walls' });
+  } else {
+    flags.push({ type: 'ok', text: p.topology.wall_count + ' walls — extrusion ready at ' + p.structural_config.wall_height_m + 'm', code: 'I002: walls_ok' });
+  }
+  if (p.topology.door_count > 0) flags.push({ type: 'ok', text: p.topology.door_count + ' door opening' + (p.topology.door_count > 1 ? 's' : '') + ' to be cut into walls', code: 'I003: doors_ok' });
+  if (p.topology.window_count > 0) flags.push({ type: 'ok', text: p.topology.window_count + ' window opening' + (p.topology.window_count > 1 ? 's' : '') + ' to be cut into walls', code: 'I004: windows_ok' });
+  if (p.topology.column_count > 0) flags.push({ type: 'ok', text: p.topology.column_count + ' structural column' + (p.topology.column_count > 1 ? 's' : '') + ' detected', code: 'I005: columns_ok' });
+  if (p.topology.column_count === 0 && p.topology.wall_count > 2) flags.push({ type: 'warn', text: 'No structural columns — consider adding RC column grid', code: 'W002: no_columns' });
+  flags.push({ type: 'ok', text: 'Structural grade ' + p.structural_config.concrete_grade + ' applied', code: 'I006: grade_ok' });
+  flags.push({ type: 'ok', text: 'IFC payload ready → karlcon_plan_integrated.py --server', code: 'I007: ifc_ready' });
+
+  container.innerHTML = flags.map(f => `
+    <div class="flag-item">
+      <div class="flag-dot ${f.type}"></div>
+      <div>
+        <div class="flag-text">${f.text}</div>
+        <div class="flag-code">${f.code}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('s4-copy').addEventListener('click', () => {
+  const payload = buildPayload();
+  const json = JSON.stringify(payload, null, 2);
+  navigator.clipboard.writeText(json).then(() => setStatus('✓ JSON payload copied to clipboard'));
+});
+
+document.getElementById('s4-download').addEventListener('click', () => {
+  const payload = buildPayload();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'karlcon_bim_' + Date.now() + '.json';
+  a.click();
+  setStatus('✓ JSON saved — run: python karlcon_plan_integrated.py --b64 <file>');
+});
+
+document.getElementById('s4-send-claude').addEventListener('click', async () => {
+  const payload = buildPayload();
+  const top = payload.topology;
+  if (top.total_elements === 0) { setStatus('⚠ No elements to send — go to Stage 1 and draw first'); return; }
+  if (top.wall_count === 0) { setStatus('⚠ No walls in sketch — Python BIM core requires at least one wall'); return; }
+
+  setStatus('⏳ Sending payload to KarlCON BIM Core (' + window.PIPELINE_BASE + ')…');
+  const btn = document.getElementById('s4-send-claude');
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`${window.PIPELINE_BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || resp.statusText);
+    }
+
+    const data = await resp.json();
+    renderBimCoreResults(data);
+    setStatus('✓ BIM Core generated ' + data.summary.wall_count + ' walls, '
+      + data.summary.opening_count + ' openings — IFC + drawings ready');
+    // refresh topology after successful generation
+    fetchAgentTopology();
+  } catch (e) {
+    setStatus('✗ BIM Core unreachable: ' + e.message
+      + ' — run: python3 server.py  (serves /generate + ws:8768)');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ── Agent topology panel toggle ─────────────────────────────
+let agentPanelOpen = true;
+function toggleAgentPanel() {
+  agentPanelOpen = !agentPanelOpen;
+  const body = document.getElementById('s4-agent-body');
+  const chev = document.getElementById('s4-agent-chevron');
+  body.style.display = agentPanelOpen ? '' : 'none';
+  chev.className = agentPanelOpen ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right';
+  chev.style.fontSize = '9px'; chev.style.color = 'var(--text3)';
+}
+
+// ── Fetch agent topology from /topology ─────────────────────
+async function fetchAgentTopology() {
+  const body = document.getElementById('s4-agent-body');
+  const badge = document.getElementById('s4-topo-valid-badge');
+  try {
+    const resp = await fetch(`${window.PIPELINE_BASE}/topology`);
+    if (!resp.ok) throw new Error(resp.statusText);
+    const data = await resp.json();
+    const nc = data.node_counts || {};
+    const issues = data.issues || [];
+    badge.style.display = '';
+    badge.className = 'topo-valid-badge ' + (data.valid ? 'valid' : 'invalid');
+    badge.innerHTML = data.valid
+      ? '<i class="fa-solid fa-check"></i> Valid'
+      : '<i class="fa-solid fa-triangle-exclamation"></i> ' + issues.length + ' issue' + (issues.length !== 1 ? 's' : '');
+
+    const rows = [
+      ['Walls',   nc.walls   || 0, '#c8c8c8'],
+      ['Doors',   nc.doors   || 0, '#4a90e2'],
+      ['Windows', nc.windows || 0, '#5ab8d6'],
+      ['Rooms',   nc.rooms   || 0, '#a0d8a0'],
+      ['Columns', nc.columns || 0, '#e0c060'],
+      ['Slabs',   nc.slabs   || 0, '#a0a0c8'],
+      ['Stairs',  nc.stairs  || 0, '#80c080'],
+      ['Total nodes', nc.total || 0, 'var(--text1)'],
+    ];
+    const stats = data.stats || {};
+    let html = rows.map(([k, v, c]) => `
+      <div class="topo-row">
+        <span class="topo-key">${k}</span>
+        <span class="topo-val" style="color:${c}">${v}</span>
+      </div>`).join('');
+
+    if (stats.strokes_processed !== undefined) {
+      html += `<div class="topo-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">
+        <span class="topo-key">Strokes processed</span>
+        <span class="topo-val" style="color:var(--text2)">${stats.strokes_processed}</span>
+      </div>
+      <div class="topo-row">
+        <span class="topo-key">Extrusions</span>
+        <span class="topo-val" style="color:var(--text2)">${stats.extrusions}</span>
+      </div>`;
+    }
+
+    if (issues.length > 0) {
+      html += `<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">
+        <div style="font-size:9px;font-weight:700;color:var(--red);margin-bottom:3px;">Topology issues:</div>
+        ${issues.slice(0, 8).map(i => `<div class="topo-issue">• ${i}</div>`).join('')}
+        ${issues.length > 8 ? `<div class="topo-issue">… and ${issues.length - 8} more</div>` : ''}
+      </div>`;
+    } else {
+      html += `<div class="topo-ok" style="margin-top:4px;"><i class="fa-solid fa-check"></i> No topology issues detected</div>`;
+    }
+    body.innerHTML = html;
+  } catch (e) {
+    badge.style.display = 'none';
+    body.innerHTML = `<div class="ingest-status err">Agent offline: ${e.message} — run python3 server.py</div>`;
+  }
+}
+
+document.getElementById('s4-fetch-topology').addEventListener('click', fetchAgentTopology);
+
+// ── Export Agent IFC JSON ────────────────────────────────────
+document.getElementById('s4-export-agent-ifc').addEventListener('click', async () => {
+  try {
+    const resp = await fetch(`${window.PIPELINE_BASE}/model`);
+    if (!resp.ok) throw new Error(resp.statusText);
+    const data = await resp.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'karlcon_agent_model_' + Date.now() + '.json';
+    a.click();
+    setStatus('✓ Agent model exported (' + (data.elements || []).length + ' elements)');
+  } catch (e) {
+    setStatus('✗ Agent unreachable: ' + e.message);
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// LIVE CANVAS SYNC — WebSocket client (window.PIPELINE_WS — resolved at runtime)
+// Streams every committed stroke to the BIM agent in real-time.
+// Auto-reconnects with exponential back-off (max 30 s).
+// ════════════════════════════════════════════════════════════
+const WS_URL = window.PIPELINE_WS;
+let   _ws          = null;
+let   _wsReady     = false;
+let   _wsRetryMs   = 1000;
+const _wsMaxRetry  = 30000;
+let   _wsRetryTimer = null;
+
+function setIngestStatus(msg, cls) {
+  const el = document.getElementById('ingest-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'ingest-status ' + (cls || '');
+}
+
+function _wsConnect() {
+  if (_ws && (_ws.readyState === WebSocket.CONNECTING ||
+              _ws.readyState === WebSocket.OPEN)) return;
+  setIngestStatus('⏳ Connecting to pipeline WebSocket…');
+  try {
+    _ws = new WebSocket(WS_URL);
+  } catch (err) {
+    _wsScheduleReconnect();
+    return;
+  }
+
+  _ws.addEventListener('open', () => {
+    _wsReady   = true;
+    _wsRetryMs = 1000;
+    clearTimeout(_wsRetryTimer);
+    setIngestStatus('● Live — canvas strokes streaming to BIM agent', 'ok');
+    // Ask for current model on connect to sync state
+    _ws.send(JSON.stringify({ type: 'get_model' }));
+  });
+
+  _ws.addEventListener('message', (evt) => {
+    let data;
+    try { data = JSON.parse(evt.data); } catch { return; }
+    if (data.type === 'sketch_ack') {
+      // Lightweight ack — update badge only
+      updateStatusBadge();
+    } else if (data.type === 'model_update') {
+      // Agent pushed a model delta — could refresh topology panel if open
+      if (document.getElementById('s4-topo-container')?.style.display !== 'none') {
+        fetchAgentTopology();
+      }
+    } else if (data.type === 'error') {
+      console.warn('[WS]', data.message);
+    }
+  });
+
+  _ws.addEventListener('close', () => {
+    _wsReady = false;
+    setIngestStatus('○ WS disconnected — retrying…', 'err');
+    _wsScheduleReconnect();
+  });
+
+  _ws.addEventListener('error', () => {
+    _wsReady = false;
+    setIngestStatus('✗ WS error — server offline?', 'err');
+    // close will fire next; let it trigger reconnect
+  });
+}
+
+function _wsScheduleReconnect() {
+  clearTimeout(_wsRetryTimer);
+  _wsRetryTimer = setTimeout(() => {
+    _wsRetryMs = Math.min(_wsRetryMs * 2, _wsMaxRetry);
+    _wsConnect();
+  }, _wsRetryMs);
+}
+
+/** Send one committed stroke to the BIM agent over WebSocket. */
+function wsSendStroke(strokeObj) {
+  if (!_wsReady || !_ws) return;
+  const wallH = parseFloat(
+    (document.getElementById('cfg-wh')?.value || '3.000').replace(/[^0-9.]/g, '')
+  ) || 3.0;
+  const wtype = document.querySelector('.wt-item.selected')?.dataset.wtype || 'EW230';
+  _ws.send(JSON.stringify({
+    type: 'sketch_stroke',
+    stroke: {
+      points:      strokeObj.pts.map(p => [Math.round(p[0]), Math.round(p[1])]),
+      type:        strokeObj.tool,
+      coord_space: 'canvas_px',
+      attributes: {
+        wall_height_m: wallH,
+        wall_type:     wtype,
+      },
+    },
+  }));
+}
+
+// Initial connect on page load
+_wsConnect();
+
+// ════════════════════════════════════════════════════════════
+// WS STATUS POLLING (polls /ws-status every 5s)
+// ════════════════════════════════════════════════════════════
+let _wsStatusEverConnected = false;
+async function pollWsStatus() {
+  const dot   = document.getElementById('ws-dot');
+  const label = document.getElementById('ws-label');
+  // Only flash "Connecting…" before we've ever successfully connected,
+  // or after a previous poll left us in an error/unknown state.
+  // Once connected, keep showing the live status during the fetch so
+  // the indicator doesn't flicker every 5s.
+  if (!_wsStatusEverConnected || dot.className === 'error' || dot.className === '') {
+    dot.className = 'connecting';
+    label.textContent = 'Connecting…';
+  }
+  try {
+    const resp = await fetch(`${window.PIPELINE_BASE}/ws-status`);
+    const data = await resp.json();
+    if (data.agent_loaded) {
+      dot.className = 'connected';
+      _wsStatusEverConnected = true;
+      const stats = data.agent_stats || {};
+      label.textContent = 'Agent live · ws:' + data.ws_port;
+    } else {
+      dot.className = '';
+      label.textContent = 'Agent loading';
+    }
+  } catch (_) {
+    dot.className = 'error';
+    label.textContent = 'Server offline';
+  }
+}
+pollWsStatus();
+setInterval(pollWsStatus, 5000);
+
+// ════════════════════════════════════════════════════════════
+// AUTO-SYNC ENGINE
+// Automatically sends pipeline JSON to /generate (and onward
+// to the Hologram renderer) whenever the sketch changes.
+//
+// Rules:
+//   • Debounce 800 ms after the last stroke commit or undo
+//   • Hash the strokes array — skip if identical to last send
+//   • Silent in background — does NOT interrupt the user's UI
+//   • Shows a small non-intrusive badge on the status bar
+//   • Writes the result ETag to sessionStorage so the Hologram
+//     HTML can poll /model/pipeline and pick it up
+//
+// Toggle:  autoSyncEnabled  (user can disable via the badge button)
+// ════════════════════════════════════════════════════════════
+let autoSyncEnabled  = true;
+let _autoSyncTimer   = null;
+let _autoSyncLastHash = '';
+let _autoSyncBusy    = false;
+
+function _strokesHash() {
+  // Fast hash: JSON of stroke points + tool + length
+  const key = strokes.map(s =>
+    s.tool + '|' + s.pts.map(p => p[0] + ',' + p[1]).join(';')
+  ).join('||');
+  // djb2 32-bit hash — good enough for change detection
+  let h = 5381;
+  for (let i = 0; i < key.length; i++) h = ((h << 5) + h) ^ key.charCodeAt(i);
+  return (h >>> 0).toString(16);
+}
+
+function _autoSyncBadge(state, detail) {
+  let el = document.getElementById('auto-sync-badge');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'auto-sync-badge';
+    el.title = 'Auto-Sync: click to toggle';
+    el.style.cssText = 'cursor:pointer;margin-left:8px;font-size:9px;padding:2px 7px;'
+      + 'border-radius:10px;border:1px solid rgba(0,210,230,.3);'
+      + 'background:rgba(0,0,0,.4);color:var(--cyan);transition:all .3s;';
+    el.onclick = () => {
+      autoSyncEnabled = !autoSyncEnabled;
+      _autoSyncBadge(autoSyncEnabled ? 'idle' : 'off', '');
+    };
+    // Insert into status bar area
+    const sb = document.querySelector('.status-bar') || document.querySelector('.pnav') || document.body;
+    sb.appendChild(el);
+  }
+  const states = {
+    idle:    { color:'rgba(0,210,230,.5)', text:'◈ AUTO-SYNC' },
+    sending: { color:'rgba(212,170,60,1)', text:'⟳ SYNCING…'  },
+    ok:      { color:'rgba(80,210,130,1)', text:'✓ SYNCED'    },
+    err:     { color:'rgba(220,60,60,.8)',  text:'✗ SYNC ERR'  },
+    off:     { color:'rgba(100,100,100,.5)',text:'◌ SYNC OFF'  },
+  };
+  const s = states[state] || states.idle;
+  el.style.color  = s.color;
+  el.style.borderColor = s.color;
+  el.textContent  = s.text + (detail ? ' · ' + detail : '');
+}
+
+async function _autoSyncSend() {
+  if (_autoSyncBusy || !autoSyncEnabled) return;
+  if (strokes.length === 0) return;
+
+  const hash = _strokesHash();
+  if (hash === _autoSyncLastHash) return;   // nothing changed
+
+  _autoSyncBusy = true;
+  _autoSyncBadge('sending', strokes.length + ' el');
+
+  try {
+    const payload = buildPayload();   // reuses existing function, no side-effects
+
+    const resp = await fetch(`${window.PIPELINE_BASE}/generate`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || resp.statusText);
+    }
+
+    const data = await resp.json();
+    _autoSyncLastHash = hash;
+
+    // Store ETag in sessionStorage so hologram poller can compare
+    if (data.cache_etag) {
+      sessionStorage.setItem('karlcon_pipeline_etag', data.cache_etag);
+      sessionStorage.setItem('karlcon_pipeline_ts',   Date.now().toString());
+    }
+
+    _autoSyncBadge('ok', data.summary?.wall_count + 'W');
+    // Fade back to idle after 2 s
+    setTimeout(() => { if (autoSyncEnabled) _autoSyncBadge('idle'); }, 2000);
+
+    // Refresh topology panel silently if it's open
+    const agentBody = document.getElementById('s4-agent-body');
+    if (agentBody && agentBody.style.display !== 'none') {
+      fetchAgentTopology().catch(() => {});
+    }
+
+  } catch (e) {
+    _autoSyncBadge('err', e.message.slice(0, 30));
+    setTimeout(() => { if (autoSyncEnabled) _autoSyncBadge('idle'); }, 4000);
+  } finally {
+    _autoSyncBusy = false;
+  }
+}
+
+/** Schedule a debounced auto-sync.  Call this after any stroke mutation. */
+function scheduleAutoSync() {
+  clearTimeout(_autoSyncTimer);
+  _autoSyncTimer = setTimeout(_autoSyncSend, 800);
+}
+
+// Init badge on DOMContentLoaded (or immediately — script runs deferred)
+_autoSyncBadge('idle');
+
+// ════════════════════════════════════════════════════════════
+// renderBimCoreResults(data)
+// Renders the full-screen overlay with ISO 128 drawings,
+// IFC download link, and Agent Model tab.
+// Called by the manual "Send to BIM Core" button AND by
+// _autoSyncSend when it receives a successful response.
+// ════════════════════════════════════════════════════════════
+function renderBimCoreResults(data) {
+  let panel = document.getElementById('bimcore-results');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'bimcore-results';
+    panel.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; '
+      + 'background:rgba(13,15,18,0.96); z-index:9999; overflow:auto; padding:24px; '
+      + 'font-family:var(--font-ui); color:var(--text1);';
+    document.body.appendChild(panel);
+  }
+
+  const views = [
+    ['plan', 'Floor Plan — Level 0'],
+    ['north', 'North Elevation'],
+    ['south', 'South Elevation'],
+    ['east', 'East Elevation'],
+    ['west', 'West Elevation'],
+    ['section_aa', 'Section A-A'],
+  ];
+
+  const cards = views.map(([key, label]) => `
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:4px; padding:10px;">
+      <div style="font-size:11px; font-weight:600; color:var(--purple); margin-bottom:6px;">${label}</div>
+      <div style="background:#fff; border-radius:2px; overflow:hidden;">${data.drawings[key]}</div>
+    </div>
+  `).join('');
+
+  const ifcBlob = 'data:application/octet-stream;base64,' + data.ifc_base64;
+
+  // Active tab state
+  let activeTab = 'drawings';
+  const tabContent = {
+    drawings: `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:14px;">${cards}</div>`,
+    agent: `<div id="bimcore-agent-content" style="padding:8px 0;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">
+        Fetching agent graph from <code style="color:var(--cyan)">GET /model</code>…
+      </div>
+    </div>`,
+  };
+
+  function renderPanel() {
+    const tabBar = `
+      <div style="display:flex;gap:2px;margin-bottom:14px;">
+        <button id="tab-drawings" onclick="switchBimTab('drawings')" style="padding:6px 14px;background:${activeTab==='drawings'?'var(--purple)':'var(--bg3)'};border:1px solid ${activeTab==='drawings'?'var(--purple)':'var(--border2)'};color:${activeTab==='drawings'?'#fff':'var(--text2)'};border-radius:3px 0 0 3px;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">
+          <i class="fa-solid fa-drafting-compass"></i> ISO 128 Drawings
+        </button>
+        <button id="tab-agent" onclick="switchBimTab('agent')" style="padding:6px 14px;background:${activeTab==='agent'?'var(--cyan)':'var(--bg3)'};border:1px solid ${activeTab==='agent'?'var(--cyan)':'var(--border2)'};color:${activeTab==='agent'?'#000':'var(--text2)'};border-radius:0 3px 3px 0;cursor:pointer;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">
+          <i class="fa-solid fa-diagram-project"></i> Agent Model
+        </button>
+      </div>
+      <div id="bimcore-tab-body">${tabContent[activeTab]}</div>
+    `;
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div>
+          <div style="font-size:14px; font-weight:700; color:var(--text1);">
+            <i class="fa-solid fa-cubes" style="color:var(--purple)"></i>
+            KarlCON BIM Core — Generated Output
+          </div>
+          <div style="font-size:11px; color:var(--text2); margin-top:4px;">
+            ${data.summary.wall_count} walls · ${data.summary.opening_count} openings ·
+            height ${data.summary.wall_height_m} m · thickness ${data.summary.wall_thickness_mm} mm
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <a class="tb-btn" href="${ifcBlob}" download="${data.ifc_filename}" style="text-decoration:none;">
+            <i class="fa-solid fa-download"></i> Download .ifc
+          </a>
+          <button class="tb-btn" id="bimcore-close"><i class="fa-solid fa-xmark"></i> Close</button>
+        </div>
+      </div>
+      ${tabBar}
+    `;
+    document.getElementById('bimcore-close').addEventListener('click', () => panel.remove());
+    if (activeTab === 'agent') loadAgentModelTab();
+  }
+
+  window.switchBimTab = function(tab) {
+    activeTab = tab;
+    renderPanel();
+  };
+
+  async function loadAgentModelTab() {
+    const el = document.getElementById('bimcore-agent-content');
+    if (!el) return;
+    try {
+      const [modelResp, topoResp] = await Promise.all([
+        fetch(`${window.PIPELINE_BASE}/model`),
+        fetch(`${window.PIPELINE_BASE}/topology`),
+      ]);
+      const model = await modelResp.json();
+      const topo  = await topoResp.json();
+      const nc = topo.node_counts || {};
+      const stats = model.stats || {};
+      const elems = model.elements || [];
+
+      const topoBadge = topo.valid
+        ? `<span style="background:rgba(16,185,129,.18);color:var(--green);padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;"><i class="fa-solid fa-check"></i> Graph Valid</span>`
+        : `<span style="background:rgba(239,68,68,.18);color:var(--red);padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> ${(topo.issues||[]).length} Issues</span>`;
+
+      const countRows = [
+        ['Walls',   nc.walls   || 0,'#c8c8c8'],
+        ['Doors',   nc.doors   || 0,'#4a90e2'],
+        ['Windows', nc.windows || 0,'#5ab8d6'],
+        ['Rooms',   nc.rooms   || 0,'#a0d8a0'],
+        ['Columns', nc.columns || 0,'#e0c060'],
+        ['Slabs',   nc.slabs   || 0,'#a0a0c8'],
+        ['Stairs',  nc.stairs  || 0,'#80c080'],
+        ['Total',   nc.total   || 0,'var(--text1)'],
+      ];
+
+      const issueHtml = (topo.issues || []).length > 0
+        ? `<div style="margin-top:10px;padding:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:4px;">
+            <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:5px;">Topology Issues</div>
+            ${(topo.issues||[]).map(i => `<div style="font-size:9px;color:var(--red);font-family:monospace;line-height:1.6;">• ${i}</div>`).join('')}
+          </div>`
+        : `<div style="margin-top:10px;font-size:9px;color:var(--green);"><i class="fa-solid fa-check"></i> No topology issues</div>`;
+
+      const elemsPreview = elems.slice(0, 12).map(e => `
+        <div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:6px 8px;font-size:9px;">
+          <span style="color:var(--purple);font-weight:700;">${e.ifc_type || 'Unknown'}</span>
+          <span style="color:var(--text3);margin-left:6px;">z=${((e.placement||{}).z||0).toFixed(2)}m</span>
+        </div>`).join('');
+
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text1);">AdvancedPlanIngestionAgent</div>
+          ${topoBadge}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+          ${countRows.map(([k,v,c]) => `
+            <div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:8px 10px;text-align:center;">
+              <div style="font-size:16px;font-weight:700;color:${c};font-family:monospace;">${v}</div>
+              <div style="font-size:8px;color:var(--text3);text-transform:uppercase;">${k}</div>
+            </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--gold);font-family:monospace;">${stats.strokes_processed||0}</div>
+            <div style="font-size:8px;color:var(--text3)">STROKES</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--orange);font-family:monospace;">${stats.nodes_created||0}</div>
+            <div style="font-size:8px;color:var(--text3)">NODES</div>
+          </div>
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--purple);font-family:monospace;">${stats.extrusions||0}</div>
+            <div style="font-size:8px;color:var(--text3)">EXTRUSIONS</div>
+          </div>
+        </div>
+        ${issueHtml}
+        ${elems.length > 0 ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;">
+              3D Elements (${elems.length} total, showing ${Math.min(12,elems.length)})
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+              ${elemsPreview}
+            </div>
+          </div>` : ''}
+        <div style="margin-top:12px;padding:8px;background:var(--bg0);border:1px solid var(--border);border-radius:3px;">
+          <div style="font-size:9px;color:var(--text3);margin-bottom:3px;">WebSocket endpoint</div>
+          <div style="font-family:monospace;font-size:10px;color:var(--cyan)" id="ws-endpoint-display">ws://…/ws-pipe</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:4px;">REST: GET /model  GET /topology  POST /stroke</div>
+        </div>
+      `;
+    } catch (e) {
+      if (el) el.innerHTML = `<div style="color:var(--red);font-size:10px;">
+        Agent unavailable: ${e.message}<br>
+        <span style="color:var(--text3)">Run: python3 server.py</span>
+      </div>`;
+    }
+  }
+
+  renderPanel();
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+// Initial render
+resizeSketchCanvas();
+setStatus('Stage 1 — Sketch  |  Draw walls, doors, columns on the canvas  |  TAB cycles tools  |  Proceed through stages when ready');
+goToStage(1);
+
+})();
+</script>
+</body>
+</html>
