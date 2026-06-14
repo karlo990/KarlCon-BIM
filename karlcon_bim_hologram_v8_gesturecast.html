@@ -96,10 +96,10 @@ body::before{
 /* ═══ HEADER — Curved Glass ═══════════════════════════════ */
 #header{
   position:fixed;top:0;left:0;right:0;
-  height:60px;
+  height:48px;
   background:linear-gradient(135deg,rgba(10,14,26,0.96) 0%,rgba(8,11,22,0.98) 100%);
   border-bottom:1px solid rgba(0,210,230,0.10);
-  display:flex;align-items:center;gap:12px;
+  display:flex;align-items:center;gap:16px;
   padding:0 20px;z-index:200;
   box-shadow:0 4px 40px rgba(0,0,0,0.6),
              0 1px 0 rgba(255,255,255,0.03),
@@ -108,18 +108,23 @@ body::before{
   -webkit-backdrop-filter:blur(20px);
 }
 
-/* ── LOGO ── */
-#logo-block{
-  display:flex;flex-direction:column;justify-content:center;gap:2px;flex-shrink:0;
+/* ── SYS STATUS ── */
+#ticker-wrap{
+  flex:1;min-width:0;overflow:hidden;
+  height:100%;display:flex;align-items:center;
 }
+.ticker-inner{
+  font-family:var(--fm);font-size:8px;letter-spacing:1px;
+  color:rgba(0,210,230,.28);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  width:100%;
+}
+
 #logo-wordmark{
   font-family:var(--fm);font-size:15px;letter-spacing:3px;
   text-transform:uppercase;color:#0fd8ec;font-weight:700;
   text-shadow:0 0 24px rgba(0,210,230,.55),0 0 48px rgba(0,160,200,.22);
-}
-#logo-sub{
-  font-family:var(--fm);font-size:6px;letter-spacing:2.2px;
-  color:rgba(0,210,230,.25);text-transform:uppercase;font-weight:300;
+  white-space:nowrap;flex-shrink:0;
 }
 
 /* ── WS PILL (curved pill) ── */
@@ -176,11 +181,7 @@ body::before{
 }
 .btn-xs:active{transform:scale(.97)}
 
-#header .divider{flex:1;min-width:8px}
-#header .sys-status{
-  font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.20);
-  letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px;
-}
+#header .divider{display:none}
 
 .hdr-dot{
   width:7px;height:7px;border-radius:50%;
@@ -195,7 +196,7 @@ body::before{
    LAYOUT GRID
 ═══════════════════════════════════════ */
 #layout{
-  position:fixed;top:60px;left:0;right:0;bottom:30px;
+  position:fixed;top:48px;left:0;right:0;bottom:30px;
   display:grid;grid-template-columns:264px 1fr 264px;
   z-index:10;
   pointer-events:none;
@@ -1011,13 +1012,12 @@ body::before{
 
   /* ── HEADER: compact single row ── */
   #header {
-    height: 52px;
+    height: 44px;
     padding: 0 12px;
     gap: 8px;
   }
-  #logo-sub { display: none; }
   #logo-wordmark { font-size: 13px; letter-spacing: 2px; }
-  .sys-status { display: none; }
+  #ticker-wrap { display: none; }
   .hdr-dot { display: none; }
   #ws-pill { padding: 5px 10px; font-size: 8px; }
   #ws-config-row { gap: 4px; }
@@ -1258,11 +1258,11 @@ body::before{
 <!-- ══════════ HEADER ══════════ -->
 <header id="header">
   <div id="logo-block">
-    <span id="logo-wordmark">◈ KarlCON</span>
-    <div id="logo-sub">PEPPER'S GHOST · BIM HOLOGRAM · v16.0 · GE-v16 · AKF+QCF+GSM+WPS · QUATERNION-SO3 · TOUCH-POINTS · 2-HAND ZOOM · FIST ROTATE · NANOMORPH v8.0</div>
+    <span id="logo-wordmark">◈ KARLCON</span>
   </div>
-  <div class="divider"></div>
-  <div class="sys-status" id="sys-status-text">◈ SYS ONLINE · THREE.JS r128 · MEDIAPIPE WASM 2-HANDS · GE-v16 · AKF+QCF+GSM · QUATERNION SO(3) · TOUCH-POINTS · FIST-ROTATE · 2-HAND-ZOOM · WPS SCHEDULER · NANOMORPH v8.0</div>
+  <div id="ticker-wrap">
+    <div class="ticker-inner" id="sys-status-text">◈ SYS ONLINE · THREE.JS r128 · MEDIAPIPE WASM 2-HANDS · GE-v16 · AKF+QCF+GSM · QUATERNION SO(3) · TOUCH-POINTS · FIST-ROTATE · 2-HAND-ZOOM · WPS SCHEDULER · NANOMORPH v8.0</div>
+  </div>
   <div id="ws-config-row">
     <input id="ws-url-input" type="hidden" value="wss://karlcon-karl.hf.space/ws"/>
     <button type="button" class="btn-xs" onclick="connectWS()">◇ CONNECT</button>
@@ -2006,11 +2006,17 @@ function animate(){
   // Exponential angular damping: ω(t+1) = ω(t) · β
   // β = 0.96 → half-life ≈ 17 frames ≈ 0.28 s at 60 fps.
   // Ref: Goldstein CM §4.9 (2002), Stokes rotational drag analogy.
+  // Idle auto-rotation: inject constant Y spin when no user/gesture driving
+  const IDLE_OMEGA = 0.004; // ~14°/s at 60fps
   if (!window._objStopped) {
     const β = 0.96;
     window._objOmegaY *= β;
     window._objOmegaX *= β;
     window._objDScale  *= β;
+    // Re-floor to idle if damped below threshold and X is settled
+    if (Math.abs(window._objOmegaY) < IDLE_OMEGA && Math.abs(window._objOmegaX) < 0.001) {
+      window._objOmegaY = IDLE_OMEGA;
+    }
   } else {
     // thumb_up: hard damp to rest within ~10 frames
     window._objOmegaY *= 0.60;
