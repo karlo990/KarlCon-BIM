@@ -188,6 +188,13 @@ body::before{
   position:fixed;top:56px;left:0;right:0;bottom:30px;
   display:grid;grid-template-columns:264px 1fr 264px;
   z-index:10;
+  pointer-events:none;
+}
+/* Restore interactivity for all UI controls inside the pointer-events:none layout */
+#layout button, #layout input, #layout select, #layout label,
+#layout a, #layout [onclick], #layout .side-panel, #layout .btn,
+#layout .btn-xs, #layout input[type=range] {
+  pointer-events: auto;
 }
 
 /* ── SIDE PANELS — index.html exact background ── */
@@ -198,6 +205,7 @@ body::before{
   overflow-y:auto;
   display:flex;flex-direction:column;gap:6px;
   scrollbar-width:thin;scrollbar-color:rgba(0,210,230,.1) transparent;
+  pointer-events:auto;
 }
 .side-panel.right{border-right:none;border-left:1px solid var(--bdr)}
 ::-webkit-scrollbar{width:2px}
