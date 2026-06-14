@@ -2192,6 +2192,19 @@ function buildBIM(geo){
   window._objStopped = false;
   scene.add(bimGroup);
 
+  // Cache geo for rebroadcast — Pepper's Ghost subscribes via bim_update
+  // Ref: Tanenbaum & Van Steen (2007) "Distributed Systems" §6.3 — state replication
+  window._lastBIMGeo = Object.assign({}, geo, {
+    floor_count:  geo.floor_count  || params.floors,
+    floor_height: geo.floor_height || params.height,
+    wing_span:    geo.wing_span    || params.span * 4,
+    depth:        geo.depth        || params.depth,
+    holo_colour:  geo.holo_colour  || '#00ffe7',
+  });
+  if (WS && WS.readyState === 1) {
+    try { WS.send(JSON.stringify({ type: 'bim_update', geometry: window._lastBIMGeo })); } catch(e) {}
+  }
+
   // Update metadata panel
   const cols = geo.columns || '—';
   const gfa  = geo.gfa    || '—';
@@ -2263,6 +2276,11 @@ function connectWS(){
     addLog('ok', 'WebSocket connected');
     WS.send(JSON.stringify({type:'health'}));
     startWSHeartbeat();
+    // Push current BIM state to newly connected Pepper's Ghost client
+    // Ref: Tanenbaum & Van Steen (2007) §6.3 — push-on-subscribe state replication
+    if (window._lastBIMGeo) {
+      try { WS.send(JSON.stringify({ type: 'bim_update', geometry: window._lastBIMGeo })); } catch(e) {}
+    }
   };
   WS.onclose = () => {
     setWSState('closed');
