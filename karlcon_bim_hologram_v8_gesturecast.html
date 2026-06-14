@@ -1934,7 +1934,13 @@ function initThree(){
   });
   cv.addEventListener('wheel', e=>{
     e.preventDefault();
+    // Local camera zoom (orbit radius) — gesturecast view only
     window._gRadius = Math.max(8, Math.min(80, window._gRadius + e.deltaY*0.05));
+    // ZOOM SYNC FIX: also drive _objScale so it broadcasts via obj_transform → Pepper's Ghost
+    // Normalise deltaY: pixel mode (~3/tick) vs line mode (~100/tick)
+    const dS = -(e.deltaY / (e.deltaMode === 0 ? 1000 : 10));
+    window._objDScale = (window._objDScale || 0) + dS;
+    window._lastInteractMs = performance.now();
   }, { passive: false });
 
   // ── OBJECT PHYSICS STATE (v10 gesture-object routing) ────────────────
@@ -2201,10 +2207,7 @@ function buildBIM(geo){
     depth:        geo.depth        || params.depth,
     holo_colour:  geo.holo_colour  || '#00ffe7',
   });
-  // FLICKER FIX: Only send bim_update when geometry has actually changed.
-  // Without this guard, every 500ms REST poll → applyGeometry → buildBIM
-  // unconditionally fires a bim_update, causing Pepper's Ghost to rebuild
-  // the full scene ~2Hz indefinitely after WS connects — visible as flicker.
+  // FLICKER FIX: only send bim_update when geometry actually changed
   const _geoKey = JSON.stringify([
     window._lastBIMGeo.floor_count, window._lastBIMGeo.floor_height,
     window._lastBIMGeo.wing_span,   window._lastBIMGeo.depth,
@@ -2289,12 +2292,9 @@ function connectWS(){
     startWSHeartbeat();
     // Push current BIM state to newly connected Pepper's Ghost client
     // Ref: Tanenbaum & Van Steen (2007) §6.3 — push-on-subscribe state replication
-    // Reset sent-key so this initial push goes through, then future sends
-    // are gated by the change-detection guard inside buildBIM.
     window._lastSentGeoKey = null;
     if (window._lastBIMGeo) {
       try { WS.send(JSON.stringify({ type: 'bim_update', geometry: window._lastBIMGeo })); } catch(e) {}
-      // Record key so the next poll cycle doesn't re-send the same unchanged geo
       window._lastSentGeoKey = JSON.stringify([
         window._lastBIMGeo.floor_count, window._lastBIMGeo.floor_height,
         window._lastBIMGeo.wing_span,   window._lastBIMGeo.depth,
