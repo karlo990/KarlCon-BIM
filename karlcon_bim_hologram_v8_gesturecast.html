@@ -17,37 +17,44 @@
    All colours, radii, shadows identical to index.html
 ══════════════════════════════════════════════════ */
 :root {
-  /* ── Colours (exact from index.html) ── */
-  --c:   #0fd8ec;          /* primary cyan */
-  --c2:  #3bbdd0;
-  --c3:  #00f0d4;
-  --gold:#d4aa3c;
-  --red: #f04460;
+  /* ── Core palette ── */
+  --c:    #0fd8ec;
+  --c2:   #3bbdd0;
+  --c3:   #00f0d4;
+  --gold: #d4aa3c;
+  --red:  #f04460;
   --green:#00e898;
   --amber:#e87a44;
-  --bg:  #080910;          /* index #setup background */
-  --bg2: #06070d;
-  --panel:rgba(9,11,21,0.97);
+  --bg:   #070910;
+  --bg2:  #06070d;
+  --panel:rgba(9,11,21,0.92);
 
-  /* ── Borders & glows (index.html values) ── */
-  --bdr: rgba(0,210,230,.09);
-  --bdr2:rgba(0,210,230,.20);
-  --glow:0 0 18px rgba(0,210,230,.14);
+  /* ── Glass surface tokens ── */
+  --glass-bg:     rgba(12,16,28,0.72);
+  --glass-border: rgba(0,210,230,0.13);
+  --glass-glow:   rgba(0,210,230,0.06);
+  --glass-shine:  rgba(255,255,255,0.04);
 
-  /* ── Radii (index.html uses 6px buttons) ── */
-  --r1:  6px;
-  --r2:  9px;
-  --r3:  14px;
+  /* ── Borders & glows ── */
+  --bdr:  rgba(0,210,230,.10);
+  --bdr2: rgba(0,210,230,.22);
+  --glow: 0 0 24px rgba(0,210,230,.16), 0 0 8px rgba(0,210,230,.08);
+
+  /* ── Curved radii system ── */
+  --r1:   10px;
+  --r2:   14px;
+  --r3:   20px;
+  --r4:   28px;
   --rpill:100px;
 
-  /* ── Status colours ── */
+  /* ── Status ── */
   --ws-on: #00e898;
   --ws-mid:#d4aa3c;
   --ws-off:#f04460;
 
-  /* ── Typography (index.html: JetBrains Mono only) ── */
+  /* ── Typography ── */
   --fm:'JetBrains Mono',monospace;
-  --fd:'JetBrains Mono',monospace;   /* index uses mono for all text */
+  --fd:'JetBrains Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -86,106 +93,109 @@ body::before{
 /* ═══════════════════════════════════════
    HEADER — index.html styling exact match
 ═══════════════════════════════════════ */
+/* ═══ HEADER — Curved Glass ═══════════════════════════════ */
 #header{
-  position:fixed;top:0;left:0;right:0;height:56px;
-  background:rgba(8,9,16,.98);
-  border-bottom:1px solid var(--bdr);
-  display:flex;align-items:center;gap:14px;
-  padding:0 18px;z-index:200;
-  box-shadow:0 1px 20px rgba(0,0,0,.7),0 0 40px rgba(0,0,0,.4);
+  position:fixed;top:0;left:0;right:0;
+  height:60px;
+  background:linear-gradient(135deg,rgba(10,14,26,0.96) 0%,rgba(8,11,22,0.98) 100%);
+  border-bottom:1px solid rgba(0,210,230,0.10);
+  display:flex;align-items:center;gap:12px;
+  padding:0 20px;z-index:200;
+  box-shadow:0 4px 40px rgba(0,0,0,0.6),
+             0 1px 0 rgba(255,255,255,0.03),
+             inset 0 1px 0 rgba(0,210,230,0.05);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
 }
 
-/* ── LOGO BLOCK — matches index.html #setup h1 treatment ── */
-#logo-block{display:flex;flex-direction:column;justify-content:center;gap:3px;flex-shrink:0}
-
-/* index.html h1: 15px, 3px letter-spacing, #0fd8ec, weight 600, uppercase */
+/* ── LOGO ── */
+#logo-block{
+  display:flex;flex-direction:column;justify-content:center;gap:2px;flex-shrink:0;
+}
 #logo-wordmark{
-  font-family:var(--fm);
-  font-size:15px;
-  letter-spacing:3px;
-  text-transform:uppercase;
-  color:#0fd8ec;
-  font-weight:600;
-  text-shadow:0 0 18px rgba(0,210,230,.38),0 0 36px rgba(0,160,200,.18);
+  font-family:var(--fm);font-size:15px;letter-spacing:3px;
+  text-transform:uppercase;color:#0fd8ec;font-weight:700;
+  text-shadow:0 0 24px rgba(0,210,230,.55),0 0 48px rgba(0,160,200,.22);
 }
-
-/* index.html sub-label: 10px, letter-spacing 1.5px, color rgba(0,210,230,.4) */
 #logo-sub{
-  font-family:var(--fm);font-size:6.2px;
-  letter-spacing:1.5px;color:rgba(0,210,230,.22);
-  text-transform:uppercase;font-weight:300;
-  margin-top:1px;
+  font-family:var(--fm);font-size:6px;letter-spacing:2.2px;
+  color:rgba(0,210,230,.25);text-transform:uppercase;font-weight:300;
 }
 
-/* ── WS PILL — index.html btn style ── */
+/* ── WS PILL (curved pill) ── */
 #ws-pill{
-  display:flex;align-items:center;gap:6px;
-  background:rgba(0,0,0,.28);
-  border:1px solid var(--bdr);
+  display:flex;align-items:center;gap:7px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(0,210,230,.14);
   border-radius:var(--rpill);
-  padding:4px 12px;
-  font-family:var(--fm);font-size:9px;
-  letter-spacing:.9px;color:rgba(0,210,230,.38);
+  padding:6px 16px;
+  font-family:var(--fm);font-size:9px;letter-spacing:1px;
+  color:rgba(0,210,230,.40);
   flex-shrink:0;cursor:pointer;
-  transition:border-color .2s,box-shadow .2s;
+  transition:all .25s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
-#ws-pill:hover{border-color:var(--c);box-shadow:var(--glow)}
+#ws-pill:hover{
+  border-color:rgba(0,210,230,.35);
+  background:rgba(0,210,230,.06);
+  color:rgba(0,210,230,.75);
+  box-shadow:0 0 18px rgba(0,210,230,.12),inset 0 1px 0 rgba(255,255,255,.05);
+}
 
 #ws-dot{
-  width:6px;height:6px;border-radius:50%;
+  width:7px;height:7px;border-radius:50%;
   background:var(--ws-off);box-shadow:0 0 6px var(--ws-off);
-  transition:all .3s;animation:pulse 2s ease-in-out infinite;
+  transition:all .35s;
 }
-#ws-dot.open{background:var(--ws-on);box-shadow:0 0 7px var(--ws-on)}
-#ws-dot.connecting{background:var(--ws-mid);box-shadow:0 0 7px var(--ws-mid)}
-#ws-dot.closed{background:var(--ws-off);box-shadow:0 0 5px var(--ws-off);animation:none}
+#ws-dot.open{background:var(--ws-on);box-shadow:0 0 10px var(--ws-on),0 0 18px rgba(0,232,152,.3);animation:pulse 2.5s ease-in-out infinite}
+#ws-dot.connecting{background:var(--ws-mid);box-shadow:0 0 8px var(--ws-mid);animation:pulse .7s ease-in-out infinite}
+#ws-dot.closed{background:var(--ws-off);box-shadow:0 0 5px var(--ws-off)}
 
-/* ── WS URL config row — index.html input styling ── */
-#ws-config-row{display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;flex-shrink:0}
+/* ── CONFIG ROW — just buttons ── */
+#ws-config-row{display:flex;align-items:center;gap:6px;flex-shrink:0}
 
-#ws-url-input{
-  background:rgba(0,210,230,.05);
-  border:1px solid rgba(0,210,230,.2);
-  border-radius:var(--r1);
-  color:var(--c);
-  font-family:var(--fm);font-size:11px;
-  padding:4px 9px;
-  width:182px;letter-spacing:.3px;
-  outline:none;
-  transition:border-color .2s;
-}
-#ws-url-input:focus{border-color:rgba(0,210,230,.5);box-shadow:0 0 8px rgba(0,210,230,.07)}
-
-/* ── Buttons (index.html .btn-xs exact style) ── */
+/* ── CURVED BUTTONS ── */
 .btn-xs{
-  padding:4px 10px;
-  background:rgba(0,210,230,.08);
-  border:1px solid rgba(0,210,230,.35);
-  color:var(--c);font-family:var(--fm);
-  font-size:9px;letter-spacing:1.5px;
-  cursor:pointer;border-radius:var(--r1);
-  text-transform:uppercase;transition:all .2s;
+  padding:6px 14px;
+  background:rgba(0,210,230,.07);
+  border:1px solid rgba(0,210,230,.22);
+  color:rgba(0,210,230,.75);
+  font-family:var(--fm);font-size:9px;letter-spacing:1.4px;
+  cursor:pointer;
+  border-radius:var(--rpill);
+  text-transform:uppercase;
+  transition:all .22s;
+  white-space:nowrap;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
-.btn-xs:hover{background:rgba(0,210,230,.18);box-shadow:0 0 18px rgba(0,210,230,.18)}
+.btn-xs:hover{
+  background:rgba(0,210,230,.16);
+  border-color:rgba(0,210,230,.50);
+  color:var(--c);
+  box-shadow:0 0 18px rgba(0,210,230,.18),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.btn-xs:active{transform:scale(.97)}
 
-#header .divider{flex:1;height:1px;background:var(--bdr)}
-/* index.html sys-status: 9px, letter-spacing .7px, color rgba(0,210,230,.28) */
-#header .sys-status{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.28);letter-spacing:.7px;white-space:nowrap}
+#header .divider{flex:1;min-width:8px}
+#header .sys-status{
+  font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.20);
+  letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px;
+}
 
 .hdr-dot{
-  width:6px;height:6px;border-radius:50%;
+  width:7px;height:7px;border-radius:50%;
   background:var(--green);
-  box-shadow:0 0 7px var(--green),0 0 14px rgba(0,232,152,.22);
+  box-shadow:0 0 10px var(--green),0 0 20px rgba(0,232,152,.28);
   animation:pulse 2.5s ease-in-out infinite;flex-shrink:0;
 }
 
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.32}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
 /* ═══════════════════════════════════════
    LAYOUT GRID
 ═══════════════════════════════════════ */
 #layout{
-  position:fixed;top:56px;left:0;right:0;bottom:30px;
+  position:fixed;top:60px;left:0;right:0;bottom:30px;
   display:grid;grid-template-columns:264px 1fr 264px;
   z-index:10;
   pointer-events:none;
@@ -199,34 +209,42 @@ body::before{
 
 /* ── SIDE PANELS — index.html exact background ── */
 .side-panel{
-  background:linear-gradient(180deg,rgba(8,9,16,.98) 0%,rgba(6,7,13,.99) 100%);
-  border-right:1px solid var(--bdr);
-  padding:9px 8px;
+  background:linear-gradient(170deg,rgba(9,12,22,0.95) 0%,rgba(7,9,18,0.97) 100%);
+  border-right:1px solid rgba(0,210,230,0.08);
+  padding:10px 9px;
   overflow-y:auto;
-  display:flex;flex-direction:column;gap:6px;
-  scrollbar-width:thin;scrollbar-color:rgba(0,210,230,.1) transparent;
+  display:flex;flex-direction:column;gap:7px;
+  scrollbar-width:thin;scrollbar-color:rgba(0,210,230,.12) transparent;
   pointer-events:auto;
+  backdrop-filter:blur(12px);
 }
-.side-panel.right{border-right:none;border-left:1px solid var(--bdr)}
-::-webkit-scrollbar{width:2px}
+.side-panel.right{border-right:none;border-left:1px solid rgba(0,210,230,0.08)}
+::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(0,210,230,.1);border-radius:4px}
+::-webkit-scrollbar-thumb{background:rgba(0,210,230,.14);border-radius:100px}
 
-/* ── PANEL BLOCKS — index.html card style ── */
+/* ── PANEL BLOCKS — curved glass cards ── */
 .panel-block{
-  background:rgba(0,210,230,.014);
-  border:1px solid var(--bdr);
-  border-radius:var(--r2);
-  padding:10px 11px;
+  background:linear-gradient(145deg,rgba(0,210,230,.028) 0%,rgba(0,160,200,.012) 100%);
+  border:1px solid rgba(0,210,230,.10);
+  border-radius:var(--r3);
+  padding:12px 13px;
   position:relative;
-  transition:border-color .2s;
+  transition:all .25s;
+  box-shadow:0 2px 16px rgba(0,0,0,.25),
+             inset 0 1px 0 rgba(255,255,255,.03);
 }
 .panel-block::before{
   content:'';position:absolute;
-  top:0;left:16px;right:16px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(0,210,230,.11),transparent);
+  top:0;left:20px;right:20px;height:1px;
+  border-radius:100px;
+  background:linear-gradient(90deg,transparent,rgba(0,210,230,.18),transparent);
 }
-.panel-block:hover{border-color:rgba(0,210,230,.15)}
+.panel-block:hover{
+  border-color:rgba(0,210,230,.20);
+  background:linear-gradient(145deg,rgba(0,210,230,.04) 0%,rgba(0,160,200,.02) 100%);
+  box-shadow:0 4px 24px rgba(0,0,0,.3),0 0 20px rgba(0,210,230,.06),inset 0 1px 0 rgba(255,255,255,.04);
+}
 
 /* ── PANEL BLOCK TITLE — index.html: 9.5px, 2px spacing, 700 weight ── */
 .panel-block-title{
@@ -245,7 +263,7 @@ body::before{
 /* ── PIPELINE SYNC STATUS — live canvas sync indicator ── */
 #sync-status-block{
   border:1px solid rgba(0,210,230,.15);
-  border-radius:var(--r2);
+  border-radius:var(--r3);
   padding:10px 12px;
   font-size:9px;color:rgba(0,210,230,.45);
   font-family:var(--fm);letter-spacing:.5px;
@@ -315,7 +333,7 @@ body::before{
   cursor:pointer;transition:all .2s;
 }
 .btn:hover{background:rgba(0,210,230,.18);border-color:rgba(0,210,230,.52);color:var(--c);box-shadow:0 0 18px rgba(0,210,230,.18)}
-.btn.primary{background:rgba(0,210,230,.08);border-color:rgba(0,210,230,.35);color:var(--c)}
+.btn.primary{background:rgba(0,210,230,.08);border-color:rgba(0,210,230,.35);color:var(--c)border-radius:var(--rpill);}
 .btn.primary:hover{background:rgba(0,210,230,.18);box-shadow:0 0 18px rgba(0,210,230,.18)}
 .btn.ws-btn{background:rgba(0,165,200,.04);border-color:rgba(0,165,200,.22);color:var(--c2)}
 .btn.ws-btn:hover{background:rgba(0,165,200,.14);box-shadow:0 0 14px rgba(0,165,200,.18)}
@@ -762,46 +780,9 @@ body::before{
     <div id="logo-sub">PEPPER'S GHOST · BIM HOLOGRAM · v16.0 · GE-v16 · AKF+QCF+GSM+WPS · QUATERNION-SO3 · TOUCH-POINTS · 2-HAND ZOOM · FIST ROTATE · NANOMORPH v8.0</div>
   </div>
   <div id="ws-config-row">
-    <input id="ws-url-input" type="text" placeholder="ws://host:8766"/>
-    <script>
-      (function(){
-        // Derive WS URL from _KARLCON_HF_BASE (set by the REST_BASE block below).
-        // When served from Vercel: WS must target HF Space /ws, not Vercel host.
-        // When served locally: falls back to ws://localhost:8766.
-        // When served from HF /hologram: uses same-origin /ws.
-        function deriveWS(){
-          var hfBase = window._KARLCON_HF_BASE || '';
-          if(hfBase){
-            // e.g. https://user-karlcon.hf.space  →  wss://user-karlcon.hf.space/ws
-            return hfBase.replace(/^http/, 'ws') + '/ws';
-          }
-          var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-          var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '');
-          return isLocal ? 'ws://localhost:8766' : proto + '//' + location.host + '/ws';
-        }
-        // _KARLCON_HF_BASE is set by the inline script in the <head> (REST_BASE block).
-        // If that script hasn't run yet (ws-config-row is in body before scripts),
-        // defer the value assignment to DOMContentLoaded.
-        if(typeof window._KARLCON_HF_BASE !== 'undefined'){
-          document.getElementById('ws-url-input').value = deriveWS();
-        } else {
-          document.addEventListener('DOMContentLoaded', function(){
-            document.getElementById('ws-url-input').value = deriveWS();
-          });
-        }
-        window._deriveWS = deriveWS;
-      })();
-    </script>
+    <input id="ws-url-input" type="hidden" value="wss://karlcon-karl.hf.space/ws"/>
     <button type="button" class="btn-xs" onclick="connectWS()">◇ CONNECT</button>
-    <button type="button" class="btn-xs" onclick="disconnectWS()" style="border-color:rgba(240,68,96,.35);color:rgba(240,88,108,.65);background:rgba(240,68,96,.04)">✕ DISC</button>
     <button type="button" class="btn-xs" id="bim-redirect-btn" onclick="openBIMPipeline()" style="border-color:rgba(0,210,120,.35);color:rgba(0,230,140,.8);background:rgba(0,180,100,.06);margin-left:4px">⬡ BIM PIPELINE</button>
-  </div>
-  <div id="hf-config-row" style="display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;flex-shrink:0;margin-top:3px">
-    <span style="color:rgba(0,200,180,.5);white-space:nowrap">DOCKER URL</span>
-    <input id="hf-space-input" type="text" placeholder="http://192.168.1.10:7860  (your local Docker IP:port)"
-      style="flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(0,180,150,.18);border-radius:3px;color:rgba(0,220,200,.85);font-family:var(--fm);font-size:10px;padding:3px 6px;outline:none"
-    />
-    <button type="button" class="btn-xs" onclick="applyHFSpace()" style="border-color:rgba(0,180,150,.35);color:rgba(0,210,180,.8);background:rgba(0,150,120,.06)">✓ SET</button>
   </div>
   <div id="ws-pill" onclick="connectWS()">
     <div id="ws-dot" class="closed"></div>
@@ -1251,21 +1232,13 @@ body::before{
 // KarlCON: Docker backend URL resolver
 // Set DOCKER_URL to your local Docker machine e.g. http://192.168.1.10:7860
 (function(){
-  var params = new URLSearchParams(window.location.search);
-  // Priority: 1) ?docker= query param  2) sessionStorage  3) localhost fallback
-  var saved = '';
-  try { saved = sessionStorage.getItem('karlcon_docker_url') || ''; } catch(e){}
-  var rawUrl = (params.get('docker') || saved || 'http://localhost:7860').replace(/\/$/, '');
-  // Sanitize: if someone saved a ws:// URL as docker_url, convert back to http://
-  // Also strip trailing /ws or /ws-pipe path segments from stale saves
-  var dockerUrl = rawUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
-  dockerUrl = dockerUrl.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
-  window._KARLCON_DOCKER_URL = dockerUrl;
-  window._REST_BASE_OVERRIDE = dockerUrl + '/pipeline';
-  window._KARLCON_HF_BASE = dockerUrl; // keep legacy refs working
+  var HF = 'https://karlcon-karl.hf.space';
+  window._KARLCON_DOCKER_URL = HF;
+  window._REST_BASE_OVERRIDE = HF + '/pipeline';
+  window._KARLCON_HF_BASE    = HF;
 })();
 Object.defineProperty(window, 'REST_BASE', {
-  get: function(){ return window._REST_BASE_OVERRIDE || 'http://localhost:7860/pipeline'; },
+  get: function(){ return window._REST_BASE_OVERRIDE || 'https://karlcon-karl.hf.space/pipeline'; },
   configurable: true
 });
 let WS           = null;
@@ -1775,25 +1748,7 @@ function disconnectWS(){
 
 // ── HF Space config ──────────────────────────────────────────────────────────
 // Called when user clicks ✓ SET — persists HF Space URL and rewires REST + WS.
-function applyHFSpace(){
-  // Now points at local Docker backend instead of HF Space
-  var rawVal = (document.getElementById('hf-space-input').value || '').trim().replace(/\/$/, '');
-  if(!rawVal){ addLog('warn','Enter Docker backend URL (e.g. http://192.168.1.10:7860)'); return; }
-  // Sanitize: ws:// → http://, wss:// → https://
-  var val = rawVal.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
-  val = val.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
-  window._KARLCON_DOCKER_URL = val;
-  window._KARLCON_HF_BASE    = val;
-  window._REST_BASE_OVERRIDE = val + '/pipeline';
-  var wsUrl = val.replace(/^http/, 'ws') + '/ws';
-  document.getElementById('ws-url-input').value = wsUrl;
-  try{ sessionStorage.setItem('karlcon_docker_url', val); }catch(e){}
-  addLog('ok',  'Docker backend → ' + val);
-  addLog('sys', 'REST → ' + window._REST_BASE_OVERRIDE);
-  addLog('sys', 'WS  → ' + wsUrl);
-  disconnectWS();
-  setTimeout(connectWS, 400);
-}
+function applyHFSpace(){ addLog("ok","Backend → https://karlcon-karl.hf.space"); connectWS(); }
 
 // ── BIM Pipeline redirect ────────────────────────────────────────────────────
 // Opens the BIM pipeline HTML served from HF Space /hologram.
@@ -1806,25 +1761,7 @@ function openBIMPipeline(){
   window.open(url, '_blank');
 }
 
-// ── Session restore ──────────────────────────────────────────────────────────
-(function(){
-  try{
-    var saved = sessionStorage.getItem('karlcon_docker_url') || sessionStorage.getItem('karlcon_hf_base');
-    if(saved){
-      // Sanitize ws:// → http:// in case ws URL was accidentally stored
-      // Also strip trailing /ws or /ws-pipe path that may have been saved by older versions
-      var savedHttp = saved.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
-      savedHttp = savedHttp.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
-      window._KARLCON_DOCKER_URL = savedHttp;
-      window._KARLCON_HF_BASE    = savedHttp;
-      window._REST_BASE_OVERRIDE = savedHttp + '/pipeline';
-      var inp = document.getElementById('hf-space-input');
-      if(inp) inp.value = savedHttp;  // use sanitized base URL
-      var wsInp = document.getElementById('ws-url-input');
-      if(wsInp) wsInp.value = savedHttp.replace(/^http/,'ws') + '/ws';
-    }
-  }catch(e){}
-})();
+// URL static — no restore needed
 
 function setWSState(state){
   const dot  = document.getElementById('ws-dot');
