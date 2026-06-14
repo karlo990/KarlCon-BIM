@@ -789,8 +789,8 @@ body::before{
     <button type="button" class="btn-xs" id="bim-redirect-btn" onclick="openBIMPipeline()" style="border-color:rgba(0,210,120,.35);color:rgba(0,230,140,.8);background:rgba(0,180,100,.06);margin-left:4px">⬡ BIM PIPELINE</button>
   </div>
   <div id="hf-config-row" style="display:flex;align-items:center;gap:6px;font-family:var(--fm);font-size:10px;flex-shrink:0;margin-top:3px">
-    <span style="color:rgba(0,200,180,.5);white-space:nowrap">HF SPACE</span>
-    <input id="hf-space-input" type="text" placeholder="https://user-karlcon-bim.hf.space"
+    <span style="color:rgba(0,200,180,.5);white-space:nowrap">DOCKER URL</span>
+    <input id="hf-space-input" type="text" placeholder="http://192.168.1.10:7860  (your local Docker IP:port)"
       style="flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(0,180,150,.18);border-radius:3px;color:rgba(0,220,200,.85);font-family:var(--fm);font-size:10px;padding:3px 6px;outline:none"
     />
     <button type="button" class="btn-xs" onclick="applyHFSpace()" style="border-color:rgba(0,180,150,.35);color:rgba(0,210,180,.8);background:rgba(0,150,120,.06)">✓ SET</button>
@@ -1240,28 +1240,22 @@ body::before{
 // REST_BASE: derived at runtime.
 // Priority: 1) ?hfSpace= query param  2) data-hf-space meta tag  3) window.KARLCON_HF_SPACE
 // 4) same-origin /pipeline  5) fallback localhost:8767 for local dev.
+// KarlCON: Docker backend URL resolver
+// Set DOCKER_URL to your local Docker machine e.g. http://192.168.1.10:7860
 (function(){
   var params = new URLSearchParams(window.location.search);
-  var hfSpace = params.get('hfSpace')
-    || (document.querySelector('meta[name="karlcon-hf-space"]') || {}).content
-    || window.KARLCON_HF_SPACE
-    || '';
-  if (!hfSpace) {
-    // When served from Vercel, HF_SPACE must be set via ?hfSpace= or meta tag.
-    // Fallback: assume /pipeline is proxied on same origin (works for HF Space /hologram).
-    var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-    hfSpace = isLocal ? '' : '';
-  }
-  window._KARLCON_HF_BASE = hfSpace ? hfSpace.replace(/\/$/, '') : '';
+  // Priority: 1) ?docker= query param  2) sessionStorage  3) localhost fallback
+  var saved = '';
+  try { saved = sessionStorage.getItem('karlcon_docker_url') || ''; } catch(e){}
+  var rawUrl = (params.get('docker') || saved || 'http://localhost:7860').replace(/\/$/, '');
+  // Sanitize: if someone saved a ws:// URL as docker_url, convert back to http://
+  var dockerUrl = rawUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  window._KARLCON_DOCKER_URL = dockerUrl;
+  window._REST_BASE_OVERRIDE = dockerUrl + '/pipeline';
+  window._KARLCON_HF_BASE = dockerUrl; // keep legacy refs working
 })();
-// REST_BASE is a live getter so applyHFSpace() can rewire it at runtime.
 Object.defineProperty(window, 'REST_BASE', {
-  get: function(){
-    if(window._REST_BASE_OVERRIDE) return window._REST_BASE_OVERRIDE;
-    if(window._KARLCON_HF_BASE) return window._KARLCON_HF_BASE + '/pipeline';
-    var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-    return isLocal ? 'http://localhost:8767' : location.origin + '/pipeline';
-  },
+  get: function(){ return window._REST_BASE_OVERRIDE || 'http://localhost:7860/pipeline'; },
   configurable: true
 });
 let WS           = null;
@@ -1772,20 +1766,20 @@ function disconnectWS(){
 // ── HF Space config ──────────────────────────────────────────────────────────
 // Called when user clicks ✓ SET — persists HF Space URL and rewires REST + WS.
 function applyHFSpace(){
-  var val = (document.getElementById('hf-space-input').value || '').trim().replace(/\/$/, '');
-  if(!val){ addLog('warn','Enter HF Space URL first'); return; }
-  window._KARLCON_HF_BASE = val;
-  // Rewire REST_BASE (const → writable shadow via window property trick)
+  // Now points at local Docker backend instead of HF Space
+  var rawVal = (document.getElementById('hf-space-input').value || '').trim().replace(/\/$/, '');
+  if(!rawVal){ addLog('warn','Enter Docker backend URL (e.g. http://192.168.1.10:7860)'); return; }
+  // Sanitize: ws:// → http://, wss:// → https://
+  var val = rawVal.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  window._KARLCON_DOCKER_URL = val;
+  window._KARLCON_HF_BASE    = val;
   window._REST_BASE_OVERRIDE = val + '/pipeline';
-  // Rewire WS input
   var wsUrl = val.replace(/^http/, 'ws') + '/ws';
   document.getElementById('ws-url-input').value = wsUrl;
-  // Persist to sessionStorage so page refresh keeps it
-  try{ sessionStorage.setItem('karlcon_hf_base', val); }catch(e){}
-  addLog('ok', 'HF Space set → ' + val);
+  try{ sessionStorage.setItem('karlcon_docker_url', val); }catch(e){}
+  addLog('ok',  'Docker backend → ' + val);
   addLog('sys', 'REST → ' + window._REST_BASE_OVERRIDE);
   addLog('sys', 'WS  → ' + wsUrl);
-  // Reconnect WS immediately
   disconnectWS();
   setTimeout(connectWS, 400);
 }
@@ -1794,8 +1788,9 @@ function applyHFSpace(){
 // Opens the BIM pipeline HTML served from HF Space /hologram.
 // Falls back to same-origin /hologram if HF base not set.
 function openBIMPipeline(){
-  var base = window._KARLCON_HF_BASE || '';
-  var url  = base ? base + '/hologram' : location.origin + '/hologram';
+  // Pipeline HTML is on Vercel — open from same origin
+  var url = location.origin + '/karlcon_bim_pipeline_v4.html'
+            + '?docker=' + encodeURIComponent(window._KARLCON_DOCKER_URL || 'http://localhost:7860');
   addLog('sys', 'Opening BIM Pipeline → ' + url);
   window.open(url, '_blank');
 }
@@ -1803,13 +1798,15 @@ function openBIMPipeline(){
 // ── Session restore ──────────────────────────────────────────────────────────
 (function(){
   try{
-    var saved = sessionStorage.getItem('karlcon_hf_base');
+    var saved = sessionStorage.getItem('karlcon_docker_url') || sessionStorage.getItem('karlcon_hf_base');
     if(saved){
-      window._KARLCON_HF_BASE = saved;
-      window._REST_BASE_OVERRIDE = saved + '/pipeline';
+      // Sanitize ws:// → http:// in case ws URL was accidentally stored
+      var savedHttp = saved.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+      window._KARLCON_DOCKER_URL = savedHttp;
+      window._KARLCON_HF_BASE    = savedHttp;
+      window._REST_BASE_OVERRIDE = savedHttp + '/pipeline';
       var inp = document.getElementById('hf-space-input');
       if(inp) inp.value = saved;
-      // Update WS input
       var wsInp = document.getElementById('ws-url-input');
       if(wsInp) wsInp.value = saved.replace(/^http/,'ws') + '/ws';
     }
@@ -5439,14 +5436,13 @@ async function triggerBIM() {
 window.addEventListener('DOMContentLoaded', ()=>{
   initThree();
   GE.classifier.loadPrototypes();   // restore persisted calibration from localStorage
-  startSyncPoller();                // begin /model/pipeline REST polling (500ms, ETag-gated, primary data channel)
+  startSyncPoller();                // begin /model/pipeline REST polling (3s, ETag-gated)
   addLog('ok','KarlCON BIM v18.0 · GE-v16 · 2-HAND ZOOM · FIST ROTATE · PURE GEOMETRY ENGINE');
   addLog('SYS','[GE-v16] ✊ FIST = rotate (wrist delta → ωY/ωX) · ◉◉ 2-HAND SPREAD = zoom in/out');
   addLog('SYS','[GE-v16] Pure geometry: no classifier · 1€-filter+EMA · fist-lock N=3 frames · dead-band 0.003');
   addLog('SYS','[GE-v16] Ref: collidingScopes/3D-editor · Zhang 2020 lm topology · Goldstein CM §4.9 · Casiez CHI 2012');
   addLog('SYS','[NanoMorph] N=800 nanoparticles · Bhattacharya 2016 Langevin SDE · TWEEN.js quintic easing');
-  addLog('SYS','REST polling /model/pipeline every 500ms — set HF Space URL above to connect to your Docker backend.');
-  addLog('SYS','WS is optional (gesture camera control only). BIM geometry flows via REST.');
+  addLog('SYS','Upload image and connect WebSocket to begin BIM decode');
 });
 
 // ── Cleanup on navigate-away / reload ──────────────────────────────────────

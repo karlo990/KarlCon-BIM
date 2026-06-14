@@ -2,21 +2,19 @@
 <html lang="en">
 <head>
 
-<!-- KarlCON: runtime REST base — resolves to /pipeline on HF Space, localhost:8767 locally -->
+<!-- KarlCON: Docker backend URL resolver -->
 <script>
 (function(){
-  var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-  // When served from HF Space /hologram, app.py injects _KARLCON_HF_BASE via WS patch script.
-  // When opened standalone (Vercel/local), fall back to same-origin /pipeline or localhost.
-  window.PIPELINE_BASE = isLocal
-    ? window.PIPELINE_BASE
-    : (location.origin + '/pipeline');
-  // WebSocket: same-origin /ws-pipe on HF, localhost on local
-  window.PIPELINE_WS = isLocal
-    ? window.PIPELINE_WS
-    : (location.origin.replace(/^http/, 'ws') + '/ws-pipe');
-  console.info('[KarlCON] PIPELINE_BASE =', window.PIPELINE_BASE);
-  console.info('[KarlCON] PIPELINE_WS   =', window.PIPELINE_WS);
+  var params = new URLSearchParams(window.location.search);
+  var saved = '';
+  try { saved = sessionStorage.getItem('karlcon_docker_url') || ''; } catch(e){}
+  var rawDockerUrl = (params.get('docker') || saved || 'http://localhost:7860').replace(/[/]+$/, '');
+  // Sanitize ws:// → http:// in case wrong URL type was stored
+  var dockerUrl = rawDockerUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  try { sessionStorage.setItem('karlcon_docker_url', dockerUrl); } catch(e){}
+  window.PIPELINE_BASE = dockerUrl + '/pipeline';
+  window.PIPELINE_WS   = dockerUrl.replace(/^http/, 'ws') + '/ws-pipe';
+  console.info('[KarlCON] Docker =', dockerUrl, '| REST =', window.PIPELINE_BASE);
 })();
 </script>
 
@@ -1520,7 +1518,7 @@ Borrmann et al. (2018) BIM, Ch.5.</div>
         <div class="s4-send-area">
           <div class="send-target">
             <div class="send-target-label">Pipeline Target</div>
-            <div class="send-target-val" id="pipeline-target-display">POST …/pipeline/generate</div>
+            <div class="send-target-val">POST …/pipeline/generate</div>
           </div>
           <button class="send-btn" id="s4-send-claude">
             <i class="fa-solid fa-bolt"></i>
@@ -3534,7 +3532,7 @@ document.getElementById('s4-send-claude').addEventListener('click', async () => 
   if (top.total_elements === 0) { setStatus('⚠ No elements to send — go to Stage 1 and draw first'); return; }
   if (top.wall_count === 0) { setStatus('⚠ No walls in sketch — Python BIM core requires at least one wall'); return; }
 
-  setStatus('⏳ Sending payload to KarlCON BIM Core (' + window.PIPELINE_BASE + ')…');
+  setStatus('⏳ Sending payload to KarlCON BIM Core (Docker backend)…');
   const btn = document.getElementById('s4-send-claude');
   btn.disabled = true;
 
@@ -3656,7 +3654,7 @@ document.getElementById('s4-export-agent-ifc').addEventListener('click', async (
 });
 
 // ════════════════════════════════════════════════════════════
-// LIVE CANVAS SYNC — WebSocket client (window.PIPELINE_WS — resolved at runtime)
+// LIVE CANVAS SYNC — WebSocket client (ws://localhost:8768)
 // Streams every committed stroke to the BIM agent in real-time.
 // Auto-reconnects with exponential back-off (max 30 s).
 // ════════════════════════════════════════════════════════════
@@ -4080,7 +4078,7 @@ function renderBimCoreResults(data) {
           </div>` : ''}
         <div style="margin-top:12px;padding:8px;background:var(--bg0);border:1px solid var(--border);border-radius:3px;">
           <div style="font-size:9px;color:var(--text3);margin-bottom:3px;">WebSocket endpoint</div>
-          <div style="font-family:monospace;font-size:10px;color:var(--cyan)" id="ws-endpoint-display">ws://…/ws-pipe</div>
+          <div style="font-family:monospace;font-size:10px;color:var(--cyan)" id="ws-ep">…/ws-pipe</div>
           <div style="font-size:9px;color:var(--text3);margin-top:4px;">REST: GET /model  GET /topology  POST /stroke</div>
         </div>
       `;
