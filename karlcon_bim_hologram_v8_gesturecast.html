@@ -764,6 +764,242 @@ body::before{
 .nano-stat-item .nsv{font-size:11px;font-weight:600;color:rgba(0,240,180,.72)}
 
 /* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
+   DOCKABLE LEFT PANEL — KarlCON v16.0
+   Collapses to 28px icon sliver; grid expands viewport to fill.
+   Transition: 260ms cubic-bezier for snappy mechanical feel.
+═══════════════════════════════════════════════════════════════ */
+
+/* Grid column transition */
+#layout { transition: grid-template-columns 260ms cubic-bezier(0.4,0,0.2,1); }
+#layout.left-collapsed { grid-template-columns: 28px 1fr 264px; }
+
+/* Left panel base */
+#left-panel {
+  position: relative;
+  overflow: hidden;
+  min-width: 264px;
+  padding: 0;
+  transition: min-width 260ms cubic-bezier(0.4,0,0.2,1);
+}
+#left-panel.collapsed { min-width: 28px; }
+
+/* Inner scrollable content */
+#left-panel-inner {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 44px 9px 10px; /* 44px top clears the dock btn */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,210,230,.12) transparent;
+  transition: opacity 180ms ease, visibility 180ms ease;
+  opacity: 1;
+  visibility: visible;
+}
+#left-panel.collapsed #left-panel-inner {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ── DOCK TOGGLE BUTTON ── */
+#left-dock-btn {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 50;
+  width: 22px;
+  height: 22px;
+  background: rgba(0,210,230,0.06);
+  border: 1px solid rgba(0,210,230,0.22);
+  border-radius: var(--r1);
+  color: rgba(0,210,230,0.55);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s, right 260ms cubic-bezier(0.4,0,0.2,1);
+  flex-shrink: 0;
+  padding: 0;
+}
+#left-dock-btn:hover {
+  background: rgba(0,210,230,0.14);
+  border-color: rgba(0,210,230,0.50);
+  color: var(--c);
+  box-shadow: 0 0 12px rgba(0,210,230,0.18);
+}
+#left-dock-btn:active { transform: scale(0.92); }
+
+/* When collapsed, btn moves to left edge of the 28px sliver */
+#left-panel.collapsed #left-dock-btn { right: auto; left: 0px; border-radius: 0 var(--r1) var(--r1) 0; }
+
+#left-dock-arrow {
+  display: inline-block;
+  transition: transform 280ms cubic-bezier(0.4,0,0.2,1);
+  line-height: 1;
+  user-select: none;
+}
+#left-panel.collapsed #left-dock-arrow { transform: rotate(180deg); }
+
+/* ── COLLAPSED ICON STRIP ── */
+#left-icon-strip {
+  position: absolute;
+  top: 40px;
+  left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+#left-panel.collapsed #left-icon-strip {
+  opacity: 1;
+  pointer-events: auto;
+}
+.lip-icon {
+  width: 28px;               /* full sliver width */
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* icons hug left edge */
+  padding-left: 5px;
+  font-size: 14px;
+  color: rgba(0,210,230,0.32);
+  cursor: pointer;
+  border-radius: 0;            /* flush with sliver */
+  transition: color 0.15s, background 0.15s;
+}
+.lip-icon:hover { color: var(--c); background: rgba(0,210,230,0.08); }
+
+/* Thin glow line on right edge */
+#left-panel::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,210,230,0.12) 30%, rgba(0,210,230,0.08) 70%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER BUTTONS — medium size
+═══════════════════════════════════════════════════════════════ */
+.btn-xs {
+  padding: 5px 11px !important;
+  font-size: 8px !important;
+  letter-spacing: 1px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DOCKABLE RIGHT PANEL — KarlCON v16.0
+═══════════════════════════════════════════════════════════════ */
+#layout.right-collapsed { grid-template-columns: 264px 1fr 28px; }
+#layout.left-collapsed.right-collapsed { grid-template-columns: 28px 1fr 28px; }
+
+#right-panel {
+  position: relative;
+  overflow: hidden;
+  min-width: 264px;
+  padding: 0;
+  transition: min-width 260ms cubic-bezier(0.4,0,0.2,1);
+}
+#right-panel.collapsed { min-width: 28px; }
+
+#right-panel-inner {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 44px 9px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,210,230,.12) transparent;
+  transition: opacity 180ms ease, visibility 180ms ease;
+  opacity: 1;
+  visibility: visible;
+}
+#right-panel.collapsed #right-panel-inner {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#right-dock-btn {
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  z-index: 50;
+  width: 22px;
+  height: 22px;
+  background: rgba(0,210,230,0.06);
+  border: 1px solid rgba(0,210,230,0.22);
+  border-radius: var(--r1);
+  color: rgba(0,210,230,0.55);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+  padding: 0;
+}
+#right-dock-btn:hover {
+  background: rgba(0,210,230,0.14);
+  border-color: rgba(0,210,230,0.50);
+  color: var(--c);
+  box-shadow: 0 0 12px rgba(0,210,230,0.18);
+}
+#right-dock-btn:active { transform: scale(0.92); }
+#right-panel.collapsed #right-dock-btn { left: auto; right: 3px; }
+
+#right-dock-arrow {
+  display: inline-block;
+  transition: transform 280ms cubic-bezier(0.4,0,0.2,1);
+  line-height: 1;
+  user-select: none;
+}
+#right-panel.collapsed #right-dock-arrow { transform: rotate(180deg); }
+
+#right-icon-strip {
+  position: absolute;
+  top: 40px;
+  left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+#right-panel.collapsed #right-icon-strip {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rip-icon {
+  width: 28px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+  font-size: 14px;
+  color: rgba(0,210,230,0.32);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.rip-icon:hover { color: var(--c); background: rgba(0,210,230,0.08); }
+
+
    MOBILE RESPONSIVE LAYER — KarlCON v16.0
    Strategy: full-viewport canvas, floating bottom drawer,
    tab-switched panel sheets, touch-sized controls
@@ -994,6 +1230,21 @@ body::before{
   letter-spacing: 0.5px;
 }
 
+
+/* ── ICON ACTIVE STATE — white highlight ── */
+.lip-icon.active,
+.rip-icon.active {
+  color: #ffffff;
+  background: rgba(0,210,230,0.14);
+  box-shadow: inset 0 0 0 1px rgba(0,210,230,0.35);
+}
+/* Glow the panel block title when it's the scroll target */
+.panel-block-title.scrolled-to {
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 0 12px rgba(0,210,230,0.6);
+  transition: color 0.3s, text-shadow 0.3s;
+}
+
 </style>
 </head>
 <body>
@@ -1010,6 +1261,8 @@ body::before{
     <span id="logo-wordmark">◈ KarlCON</span>
     <div id="logo-sub">PEPPER'S GHOST · BIM HOLOGRAM · v16.0 · GE-v16 · AKF+QCF+GSM+WPS · QUATERNION-SO3 · TOUCH-POINTS · 2-HAND ZOOM · FIST ROTATE · NANOMORPH v8.0</div>
   </div>
+  <div class="divider"></div>
+  <div class="sys-status" id="sys-status-text">◈ SYS ONLINE · THREE.JS r128 · MEDIAPIPE WASM 2-HANDS · GE-v16 · AKF+QCF+GSM · QUATERNION SO(3) · TOUCH-POINTS · FIST-ROTATE · 2-HAND-ZOOM · WPS SCHEDULER · NANOMORPH v8.0</div>
   <div id="ws-config-row">
     <input id="ws-url-input" type="hidden" value="wss://karlcon-karl.hf.space/ws"/>
     <button type="button" class="btn-xs" onclick="connectWS()">◇ CONNECT</button>
@@ -1019,8 +1272,6 @@ body::before{
     <div id="ws-dot" class="closed"></div>
     <span id="ws-status-text">WS OFFLINE</span>
   </div>
-  <div class="divider"></div>
-  <div class="sys-status" id="sys-status-text">◈ SYS ONLINE · THREE.JS r128 · MEDIAPIPE WASM 2-HANDS · GE-v16 · AKF+QCF+GSM · QUATERNION SO(3) · TOUCH-POINTS · FIST-ROTATE · 2-HAND-ZOOM · WPS SCHEDULER · NANOMORPH v8.0</div>
   <div class="hdr-dot"></div>
 </header>
 
@@ -1028,9 +1279,25 @@ body::before{
 <div id="layout">
 
   <!-- LEFT PANEL -->
-  <aside class="side-panel">
+  <aside class="side-panel" id="left-panel">
+    <!-- Dock toggle — always visible -->
+    <button id="left-dock-btn" onclick="toggleLeftPanel()" title="Collapse / expand panel" aria-label="Toggle left panel">
+      <span id="left-dock-arrow">‹</span>
+    </button>
+
+    <!-- Icon strip shown only when collapsed -->
+    <div id="left-icon-strip">
+      <div class="lip-icon" data-target="pb-pipeline-input" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">⬡</div>
+      <div class="lip-icon" data-target="pb-ws-pipeline" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◉</div>
+      <div class="lip-icon" data-target="pb-bim-params" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◈</div>
+      <div class="lip-icon" data-target="pb-render-layers" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◎</div>
+      <div class="lip-icon" data-target="pb-actions" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">▶</div>
+    </div>
+
+    <!-- Scrollable panel content — hidden when collapsed -->
+    <div id="left-panel-inner">
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">⬡</span> PIPELINE INPUT</div>
+      <div class="panel-block-title" id="pb-pipeline-input"><span class="pbt-icon">⬡</span> PIPELINE INPUT</div>
       <div id="sync-status-block">
         <div id="sync-status-icon" style="font-size:16px;margin-bottom:4px;text-align:center">◈</div>
         <div id="sync-status-text" style="text-align:center;line-height:1.8">Awaiting auto-sync<br>from Pipeline canvas…</div>
@@ -1039,7 +1306,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◉</span> WS PIPELINE</div>
+      <div class="panel-block-title" id="pb-ws-pipeline"><span class="pbt-icon">◉</span> WS PIPELINE</div>
       <div id="ws-pipeline">
         <div id="ws-stage-text">IDLE</div>
         <div id="ws-progress-bar-wrap"><div id="ws-progress-bar"></div></div>
@@ -1049,7 +1316,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◈</span> BIM PARAMETERS</div>
+      <div class="panel-block-title" id="pb-bim-params"><span class="pbt-icon">◈</span> BIM PARAMETERS</div>
       <div class="ctrl-row"><label>Floors</label><input type="range" id="sl-floors" min="1" max="20" value="3" oninput="updateParam('floors',this.value)"/><span class="val" id="v-floors">3</span></div>
       <div class="ctrl-row"><label>Wing Span</label><input type="range" id="sl-span" min="1" max="5" value="2" step="0.5" oninput="updateParam('span',this.value)"/><span class="val" id="v-span">2.0</span></div>
       <div class="ctrl-row"><label>Floor H (m)</label><input type="range" id="sl-height" min="2" max="6" value="3" step="0.5" oninput="updateParam('height',this.value)"/><span class="val" id="v-height">3.0</span></div>
@@ -1058,7 +1325,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◎</span> RENDER LAYERS</div>
+      <div class="panel-block-title" id="pb-render-layers"><span class="pbt-icon">◎</span> RENDER LAYERS</div>
       <div class="toggle-row"><span>Structural Grid</span><div class="toggle on" id="t-grid" onclick="toggleLayer('grid',this)"></div></div>
       <div class="toggle-row"><span>Floor Slabs</span><div class="toggle on" id="t-slabs" onclick="toggleLayer('slabs',this)"></div></div>
       <div class="toggle-row"><span>Columns</span><div class="toggle on" id="t-cols" onclick="toggleLayer('cols',this)"></div></div>
@@ -1070,7 +1337,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">▶</span> ACTIONS</div>
+      <div class="panel-block-title" id="pb-actions"><span class="pbt-icon">▶</span> ACTIONS</div>
       <button type="button" class="btn primary" onclick="triggerBIM()">⬡ GENERATE BIM MODEL</button>
       <button type="button" class="btn morph-btn" id="nano-morph-btn" onclick="triggerNanoMorph()">⬡ NANOMORPH: SOLID → BIM</button>
       <button type="button" class="btn gesture-btn" id="gesture-toggle-btn" onclick="toggleGestureEngine()">◈ GESTURE CONTROL: OFF</button>
@@ -1082,7 +1349,8 @@ body::before{
       <button type="button" class="btn" onclick="resetScene()">↺ RESET SCENE</button>
       <button type="button" class="btn danger" onclick="clearAll()">✕ CLEAR ALL</button>
     </div>
-  </div>
+  </div><!-- /left-panel-inner -->
+  </aside><!-- /left-panel -->
 
   <!-- VIEWPORT -->
   <div id="viewport">
@@ -1187,9 +1455,25 @@ body::before{
   </div>
 
   <!-- RIGHT PANEL -->
-  <aside class="side-panel right">
+  <aside class="side-panel right" id="right-panel">
+    <!-- Dock toggle -->
+    <button id="right-dock-btn" onclick="toggleRightPanel()" title="Collapse / expand panel" aria-label="Toggle right panel">
+      <span id="right-dock-arrow">›</span>
+    </button>
+    <!-- Icon strip shown when collapsed -->
+    <div id="right-icon-strip">
+      <div class="rip-icon" data-target="pb-bim-meta" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">⊞</div>
+      <div class="rip-icon" data-target="pb-ai-semantics" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">◈</div>
+      <div class="rip-icon" data-target="pb-struct" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">⬡</div>
+      <div class="rip-icon" data-target="pb-ifc-topo" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">≋</div>
+      <div class="rip-icon" data-target="pb-holo-proj" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">◉</div>
+      <div class="rip-icon" data-target="pb-gesture-engine" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">◁</div>
+      <div class="rip-icon" data-target="pb-event-log" data-panel="right-panel-inner" onclick="iconScrollTo(this,'right')">▤</div>
+    </div>
+    <!-- Scrollable content -->
+    <div id="right-panel-inner">
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">⊞</span> BIM METADATA</div>
+      <div class="panel-block-title" id="pb-bim-meta"><span class="pbt-icon">⊞</span> BIM METADATA</div>
       <div class="stat-grid">
         <div class="stat-item"><div class="sk">FLOORS</div><div class="sv" id="m-floors">—</div></div>
         <div class="stat-item"><div class="sk">COLUMNS</div><div class="sv" id="m-cols">—</div></div>
@@ -1203,7 +1487,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◈</span> AI SEMANTICS</div>
+      <div class="panel-block-title" id="pb-ai-semantics"><span class="pbt-icon">◈</span> AI SEMANTICS</div>
       <div id="ai-semantics" class="dim-text">No pipeline ingested yet.<br>Connect WS and ingest JSON<br>to see live BIM semantics.</div>
       <div id="ai-confidence-wrap" style="display:none;margin-top:6px">
         <div style="font-size:8px;color:rgba(0,210,230,.26);letter-spacing:1px;margin-bottom:2px">CONFIDENCE</div>
@@ -1213,7 +1497,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">⬡</span> STRUCTURAL ANALYSIS</div>
+      <div class="panel-block-title" id="pb-struct"><span class="pbt-icon">⬡</span> STRUCTURAL ANALYSIS</div>
       <div id="struct-analysis" class="dim-text">No pipeline ingested.<br>Load pipeline JSON to begin BIM analysis.</div>
       <div class="ifc-legend" id="ifc-legend" style="display:none">
         <div class="ifc-tag slab">IfcSlab</div><div class="ifc-tag col">IfcColumn</div>
@@ -1223,7 +1507,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">≋</span> IFC STROKE TOPOLOGY</div>
+      <div class="panel-block-title" id="pb-ifc-topo"><span class="pbt-icon">≋</span> IFC STROKE TOPOLOGY</div>
       <div id="depth-info" class="dim-text">IFC wall topology<br>(BS8110 · ISO 16739)<br>Awaiting pipeline ingest…</div>
       <div id="stroke-topology" style="font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.5);margin-top:5px;line-height:1.9;display:none"></div>
     </div>
@@ -1235,7 +1519,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◉</span> HOLO PROJECTOR</div>
+      <div class="panel-block-title" id="pb-holo-proj"><span class="pbt-icon">◉</span> HOLO PROJECTOR</div>
       <div class="ctrl-row"><label>Alpha</label><input type="range" id="sl-alpha" min="0.1" max="1" value="0.65" step="0.05" oninput="updateParam('alpha',this.value)"/><span class="val" id="v-alpha">0.65</span></div>
       <div class="ctrl-row"><label>Pulse</label><input type="range" id="sl-pulse" min="0.2" max="3" value="1" step="0.1" oninput="updateParam('pulse',this.value)"/><span class="val" id="v-pulse">1.0</span></div>
       <div class="ctrl-row"><label>Glitch</label><input type="range" id="sl-glitch" min="0" max="1" value="0.15" step="0.05" oninput="updateParam('glitch',this.value)"/><span class="val" id="v-glitch">0.15</span></div>
@@ -1250,7 +1534,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">◁</span> GESTURE ENGINE</div>
+      <div class="panel-block-title" id="pb-gesture-engine"><span class="pbt-icon">◁</span> GESTURE ENGINE</div>
       <div class="dim-text" id="gesture-panel-info">
         MediaPipe HandLandmarker WASM<br>
         192-dim · MHA-Attention v16.0 · T=16 ring buffer<br>
@@ -1322,7 +1606,7 @@ body::before{
     </div>
 
     <div class="panel-block">
-      <div class="panel-block-title"><span class="pbt-icon">▤</span> EVENT LOG</div>
+      <div class="panel-block-title" id="pb-event-log"><span class="pbt-icon">▤</span> EVENT LOG</div>
       <div id="anno-log">
         <div class="log-entry"><span class="ts">[BOOT]</span> KarlCON BIM v16.0 · GE v16.0 · IFC Stroke Pipeline v3</div>
         <div class="log-entry"><span class="ts">[SYS]</span> Three.js WebGL 2.0 renderer ready</div>
@@ -1336,7 +1620,8 @@ body::before{
         <div class="log-entry ok"><span class="ts">[REF]</span> Registerable gestures: MDPI Sensors 24(19) 2024</div>
       </div>
     </div>
-  </aside>
+    </div><!-- /right-panel-inner -->
+  </aside><!-- /right-panel -->
 
 </div>
 
@@ -5896,6 +6181,173 @@ window.addEventListener('pagehide', () => {
   });
 
 })();
+
+/* ══════════════════════════════════════════
+   DOCKABLE LEFT PANEL CONTROLLER
+══════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  const STORAGE_KEY = 'karlcon_left_panel_collapsed';
+
+  function applyState(collapsed, animate) {
+    const panel  = document.getElementById('left-panel');
+    const layout = document.getElementById('layout');
+    const arrow  = document.getElementById('left-dock-arrow');
+    if (!panel || !layout) return;
+
+    if (!animate) {
+      // suppress transition on first paint
+      panel.style.transition  = 'none';
+      layout.style.transition = 'none';
+    }
+
+    if (collapsed) {
+      panel.classList.add('collapsed');
+      layout.classList.add('left-collapsed');
+    } else {
+      panel.classList.remove('collapsed');
+      layout.classList.remove('left-collapsed');
+    }
+
+    if (!animate) {
+      // re-enable transitions after a frame
+      requestAnimationFrame(() => {
+        panel.style.transition  = '';
+        layout.style.transition = '';
+      });
+    }
+
+    // Kick Three.js to recalculate canvas size
+    setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 280);
+  }
+
+  window.toggleLeftPanel = function() {
+    const panel = document.getElementById('left-panel');
+    if (!panel) return;
+    const nowCollapsed = !panel.classList.contains('collapsed');
+    applyState(nowCollapsed, true);
+    try { localStorage.setItem(STORAGE_KEY, nowCollapsed ? '1' : '0'); } catch(e){}
+  };
+
+  // Restore saved state on load (no animation on first paint)
+  document.addEventListener('DOMContentLoaded', () => {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(STORAGE_KEY) === '1'; } catch(e){}
+    applyState(collapsed, false);
+  });
+
+  // Keyboard shortcut: [ to toggle
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === '[') window.toggleLeftPanel();
+  });
+
+})();
+/* ══════════════════════════════════════════
+   DOCKABLE RIGHT PANEL CONTROLLER
+══════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const STORAGE_KEY = 'karlcon_right_panel_collapsed';
+
+  function applyState(collapsed, animate) {
+    const panel  = document.getElementById('right-panel');
+    const layout = document.getElementById('layout');
+    if (!panel || !layout) return;
+    if (!animate) {
+      panel.style.transition  = 'none';
+      layout.style.transition = 'none';
+    }
+    if (collapsed) {
+      panel.classList.add('collapsed');
+      layout.classList.add('right-collapsed');
+    } else {
+      panel.classList.remove('collapsed');
+      layout.classList.remove('right-collapsed');
+    }
+    if (!animate) {
+      requestAnimationFrame(() => {
+        panel.style.transition  = '';
+        layout.style.transition = '';
+      });
+    }
+    setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 280);
+  }
+
+  window.toggleRightPanel = function() {
+    const panel = document.getElementById('right-panel');
+    if (!panel) return;
+    const nowCollapsed = !panel.classList.contains('collapsed');
+    applyState(nowCollapsed, true);
+    try { localStorage.setItem(STORAGE_KEY, nowCollapsed ? '1' : '0'); } catch(e){}
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(STORAGE_KEY) === '1'; } catch(e){}
+    applyState(collapsed, false);
+  });
+
+  // Keyboard shortcut: ] to toggle right panel
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ']') window.toggleRightPanel();
+  });
+})();
+
+/* ══════════════════════════════════════════
+   ICON SCROLL-TO — highlight + scroll
+══════════════════════════════════════════ */
+window.iconScrollTo = function(el, side) {
+  const targetId  = el.getAttribute('data-target');
+  const panelId   = el.getAttribute('data-panel');
+
+  // Expand the panel if collapsed
+  if (side === 'left') {
+    const p = document.getElementById('left-panel');
+    if (p && p.classList.contains('collapsed')) toggleLeftPanel();
+  } else {
+    const p = document.getElementById('right-panel');
+    if (p && p.classList.contains('collapsed')) toggleRightPanel();
+  }
+
+  // Clear previous active icon in this strip
+  const strip = el.parentElement;
+  strip.querySelectorAll('.lip-icon,.rip-icon').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+
+  // Scroll the inner panel to the target block
+  // Allow time for panel expand transition (260ms) before scrolling
+  const doScroll = () => {
+    const target = document.getElementById(targetId);
+    const inner  = document.getElementById(panelId);
+    if (!target || !inner) return;
+
+    // Clear previous scroll highlight
+    inner.querySelectorAll('.panel-block-title.scrolled-to')
+         .forEach(t => t.classList.remove('scrolled-to'));
+
+    const panelTop   = inner.getBoundingClientRect().top;
+    const targetTop  = target.getBoundingClientRect().top;
+    const scrollDiff = targetTop - panelTop;
+
+    inner.scrollBy({ top: scrollDiff - 8, behavior: 'smooth' });
+
+    // Pulse-highlight the title
+    target.classList.add('scrolled-to');
+    setTimeout(() => target.classList.remove('scrolled-to'), 1400);
+  };
+
+  // If panel was collapsed, wait for expand; else scroll immediately
+  const panel = document.getElementById(side === 'left' ? 'left-panel' : 'right-panel');
+  if (panel && panel.classList.contains('collapsed')) {
+    setTimeout(doScroll, 290);
+  } else {
+    doScroll();
+  }
+};
+
 </script>
 </body>
 </html>
