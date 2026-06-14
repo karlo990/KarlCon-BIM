@@ -11,6 +11,8 @@
   var rawDockerUrl = (params.get('docker') || saved || 'http://localhost:7860').replace(/[/]+$/, '');
   // Sanitize ws:// → http:// in case wrong URL type was stored
   var dockerUrl = rawDockerUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  // Strip stale /ws or /ws-pipe suffix that old versions may have persisted
+  dockerUrl = dockerUrl.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
   try { sessionStorage.setItem('karlcon_docker_url', dockerUrl); } catch(e){}
   window.PIPELINE_BASE = dockerUrl + '/pipeline';
   window.PIPELINE_WS   = dockerUrl.replace(/^http/, 'ws') + '/ws-pipe';
@@ -1227,7 +1229,7 @@ canvas.draw-canvas {
           <div class="ingest-status" id="ingest-status">⏳ Connecting to pipeline WebSocket…</div>
           <div style="font-size:9px;color:var(--text3);margin-top:6px;">
             Strokes stream automatically to the BIM agent via WebSocket.<br>
-            Run: <code style="color:var(--cyan)">python server.py</code>
+            Run: <code style="color:var(--cyan)">docker run -p 7860:7860 karlcon-bim</code>
           </div>
         </div>
       </div>
@@ -2175,7 +2177,7 @@ async function fetchS2Drawings() {
       + s2Summary.opening_count + ' openings');
   } catch (e) {
     msgEl.innerHTML = '✗ BIM Core unreachable: ' + e.message
-      + '<br><small>Start with: <code>python3 server.py</code> on port 8767</small>';
+      + '<br><small>Start with: <code>docker run -p 7860:7860 karlcon-bim</code> on port 8767</small>';
     loadEl.style.display = 'flex';
     svgEl.style.display  = 'none';
     setStatus('✗ projection.py server unreachable — ' + e.message);
@@ -3429,7 +3431,7 @@ function buildPayload() {
       mode: 'websocket',
       ws_port: 8768,
       rest_port: 8767,
-      command: 'python server.py',
+      command: 'docker run -p 7860:7860 karlcon-bim',
       ws_command: 'python karlcon_plan_integrated.py --server --port 8768',
     },
   };
@@ -3556,7 +3558,7 @@ document.getElementById('s4-send-claude').addEventListener('click', async () => 
     fetchAgentTopology();
   } catch (e) {
     setStatus('✗ BIM Core unreachable: ' + e.message
-      + ' — run: python3 server.py  (serves /generate + ws:8768)');
+      + ' — run: docker run -p 7860:7860 karlcon-bim  (serves /generate + ws:8768)');
     console.error(e);
   } finally {
     btn.disabled = false;
@@ -3630,7 +3632,7 @@ async function fetchAgentTopology() {
     body.innerHTML = html;
   } catch (e) {
     badge.style.display = 'none';
-    body.innerHTML = `<div class="ingest-status err">Agent offline: ${e.message} — run python3 server.py</div>`;
+    body.innerHTML = `<div class="ingest-status err">Agent offline: ${e.message} — run docker run -p 7860:7860 karlcon-bim</div>`;
   }
 }
 
@@ -4085,7 +4087,7 @@ function renderBimCoreResults(data) {
     } catch (e) {
       if (el) el.innerHTML = `<div style="color:var(--red);font-size:10px;">
         Agent unavailable: ${e.message}<br>
-        <span style="color:var(--text3)">Run: python3 server.py</span>
+        <span style="color:var(--text3)">Run: docker run -p 7860:7860 karlcon-bim</span>
       </div>`;
     }
   }

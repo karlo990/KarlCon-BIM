@@ -1249,7 +1249,9 @@ body::before{
   try { saved = sessionStorage.getItem('karlcon_docker_url') || ''; } catch(e){}
   var rawUrl = (params.get('docker') || saved || 'http://localhost:7860').replace(/\/$/, '');
   // Sanitize: if someone saved a ws:// URL as docker_url, convert back to http://
+  // Also strip trailing /ws or /ws-pipe path segments from stale saves
   var dockerUrl = rawUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  dockerUrl = dockerUrl.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
   window._KARLCON_DOCKER_URL = dockerUrl;
   window._REST_BASE_OVERRIDE = dockerUrl + '/pipeline';
   window._KARLCON_HF_BASE = dockerUrl; // keep legacy refs working
@@ -1771,6 +1773,7 @@ function applyHFSpace(){
   if(!rawVal){ addLog('warn','Enter Docker backend URL (e.g. http://192.168.1.10:7860)'); return; }
   // Sanitize: ws:// → http://, wss:// → https://
   var val = rawVal.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+  val = val.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
   window._KARLCON_DOCKER_URL = val;
   window._KARLCON_HF_BASE    = val;
   window._REST_BASE_OVERRIDE = val + '/pipeline';
@@ -1801,14 +1804,16 @@ function openBIMPipeline(){
     var saved = sessionStorage.getItem('karlcon_docker_url') || sessionStorage.getItem('karlcon_hf_base');
     if(saved){
       // Sanitize ws:// → http:// in case ws URL was accidentally stored
+      // Also strip trailing /ws or /ws-pipe path that may have been saved by older versions
       var savedHttp = saved.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+      savedHttp = savedHttp.replace(/\/ws-pipe$/, '').replace(/\/ws$/, '');
       window._KARLCON_DOCKER_URL = savedHttp;
       window._KARLCON_HF_BASE    = savedHttp;
       window._REST_BASE_OVERRIDE = savedHttp + '/pipeline';
       var inp = document.getElementById('hf-space-input');
-      if(inp) inp.value = saved;
+      if(inp) inp.value = savedHttp;  // use sanitized base URL
       var wsInp = document.getElementById('ws-url-input');
-      if(wsInp) wsInp.value = saved.replace(/^http/,'ws') + '/ws';
+      if(wsInp) wsInp.value = savedHttp.replace(/^http/,'ws') + '/ws';
     }
   }catch(e){}
 })();
