@@ -763,6 +763,237 @@ body::before{
 .nano-stat-item .nsk{font-size:7px;letter-spacing:1.4px;color:rgba(0,240,180,.28);margin-bottom:1px}
 .nano-stat-item .nsv{font-size:11px;font-weight:600;color:rgba(0,240,180,.72)}
 
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE LAYER — KarlCON v16.0
+   Strategy: full-viewport canvas, floating bottom drawer,
+   tab-switched panel sheets, touch-sized controls
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── BODY: allow scroll for drawer, restore overflow ── */
+  body { overflow: hidden; }
+
+  /* ── HEADER: compact single row ── */
+  #header {
+    height: 52px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  #logo-sub { display: none; }
+  #logo-wordmark { font-size: 13px; letter-spacing: 2px; }
+  .sys-status { display: none; }
+  .hdr-dot { display: none; }
+  #ws-pill { padding: 5px 10px; font-size: 8px; }
+  #ws-config-row { gap: 4px; }
+  .btn-xs { padding: 5px 10px; font-size: 8px; letter-spacing: 0.8px; }
+  #bim-redirect-btn { display: none; }
+
+  /* ── LAYOUT: full-viewport single column ── */
+  #layout {
+    top: 52px;
+    bottom: 56px; /* room for mobile nav bar */
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  /* Hide both side panels — replaced by drawer sheets */
+  #layout > .side-panel { display: none !important; }
+
+  /* Viewport fills everything */
+  #viewport { grid-column: 1; grid-row: 1; }
+
+  /* ── BOTTOM BAR: hide desktop HUD, use mobile nav ── */
+  #bottom-bar { display: none; }
+
+  /* ── MODE TABS: repositioned for mobile ── */
+  #mode-tabs {
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px;
+    gap: 1px;
+  }
+  .mtab {
+    font-size: 7px;
+    padding: 4px 9px;
+    letter-spacing: 0.8px;
+  }
+
+  /* ── HUD OVERLAY: smaller ── */
+  #hud-overlay { font-size: 7.5px; top: 38px; right: 8px; }
+
+  /* ── GESTURE / NANO PILLS: reposition so they don't clash ── */
+  #gesture-pill { top: 44px; font-size: 8px; padding: 4px 10px; }
+  #nano-pill    { top: 74px; font-size: 8px; padding: 4px 10px; }
+
+  /* ── GESTURE PiP: reposition bottom-left (no side panel offset) ── */
+  #gesture-pip  { left: 8px; bottom: 66px; width: 160px; height: 120px; }
+
+  /* ══════════════════════════════════════════
+     MOBILE NAV BAR — fixed bottom tab bar
+  ══════════════════════════════════════════ */
+  #mob-nav {
+    display: flex !important;
+  }
+
+  /* ══════════════════════════════════════════
+     DRAWER SHEETS
+  ══════════════════════════════════════════ */
+  .mob-drawer {
+    display: block !important;
+  }
+
+  /* ── touch-size sliders ── */
+  .ctrl-row input[type=range] { width: 100%; height: 4px; margin: 4px 0; }
+  .ctrl-row input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; }
+  .ctrl-row { flex-wrap: wrap; gap: 4px; }
+  .ctrl-row label { flex: 0 0 90px; font-size: 11px; }
+  .ctrl-row .val { font-size: 11px; }
+
+  /* ── touch-size toggles ── */
+  .toggle { width: 38px; height: 20px; flex-shrink: 0; }
+  .toggle::after { width: 14px; height: 14px; top: 2px; left: 2px; }
+  .toggle.on::after { left: 21px; }
+  .toggle-row { font-size: 12px; padding: 2px 0; }
+
+  /* ── touch-size buttons ── */
+  .btn { padding: 10px; font-size: 10px; margin-bottom: 6px; }
+
+  /* ── panel blocks inside drawer: remove border-radius so they tile ── */
+  .mob-drawer .panel-block { border-radius: var(--r2); margin-bottom: 8px; }
+  .mob-drawer .panel-block-title { font-size: 10px; }
+
+} /* end @media mobile */
+
+/* ── MOBILE NAV BAR — always defined, hidden on desktop ── */
+#mob-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 56px;
+  background: rgba(7,9,16,0.98);
+  border-top: 1px solid rgba(0,210,230,0.10);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 300;
+  align-items: stretch;
+  justify-content: space-around;
+}
+#mob-nav::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,210,230,.14),transparent);
+}
+.mob-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 3px;
+  cursor: pointer;
+  color: rgba(0,210,230,0.28);
+  font-family: var(--fm);
+  font-size: 7.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color .2s, background .2s;
+  border: none;
+  background: transparent;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-tab .mob-icon { font-size: 18px; line-height: 1; }
+.mob-tab.active { color: var(--c); }
+.mob-tab.active .mob-icon {
+  filter: drop-shadow(0 0 6px rgba(0,210,230,0.7));
+}
+.mob-tab:active { background: rgba(0,210,230,0.06); }
+
+/* ── DRAWER SHEETS ── */
+.mob-drawer {
+  display: none; /* shown only on mobile via @media */
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 56px; /* above mob-nav */
+  z-index: 250;
+  background: linear-gradient(180deg, rgba(8,9,18,0.0) 0%, rgba(8,9,18,0.97) 6%);
+  /* starts transparent at top, solid below */
+  border-top: 1px solid rgba(0,210,230,0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto;
+  max-height: 70vh;
+  transform: translateY(100%);
+  transition: transform .32s cubic-bezier(0.32, 0.72, 0, 1);
+  padding: 0 12px 16px;
+  scrollbar-width: none;
+}
+.mob-drawer::-webkit-scrollbar { display: none; }
+.mob-drawer.open { transform: translateY(0); }
+
+/* Drawer grab handle */
+.mob-drawer::before {
+  content: '';
+  display: block;
+  width: 36px; height: 4px;
+  border-radius: 100px;
+  background: rgba(0,210,230,0.18);
+  margin: 10px auto 14px;
+  flex-shrink: 0;
+}
+
+/* Quick action row at top of actions drawer */
+.mob-quick-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mob-quick-btn {
+  padding: 12px 8px;
+  background: rgba(0,210,230,0.07);
+  border: 1px solid rgba(0,210,230,0.25);
+  border-radius: var(--r2);
+  color: rgba(0,210,230,0.75);
+  font-family: var(--fm);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-quick-btn:active {
+  background: rgba(0,210,230,0.16);
+  border-color: rgba(0,210,230,0.5);
+}
+.mob-quick-btn.primary {
+  background: rgba(0,210,230,0.10);
+  border-color: rgba(0,210,230,0.45);
+  color: var(--c);
+}
+.mob-quick-btn.danger {
+  border-color: rgba(240,68,96,0.3);
+  color: rgba(240,90,115,0.7);
+}
+
+/* Status strip at top of each drawer */
+.mob-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,210,230,0.08);
+  border-radius: var(--r2);
+  margin-bottom: 12px;
+  font-family: var(--fm);
+  font-size: 9px;
+  color: rgba(0,210,230,0.40);
+  letter-spacing: 0.5px;
+}
+
 </style>
 </head>
 <body>
@@ -5403,6 +5634,268 @@ window.addEventListener('pagehide', () => {
   if (GE._ptzAbort) GE._ptzAbort();
   if (GE._ptzImg) { GE._ptzImg.src = ''; }
 });
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     MOBILE UI — bottom nav + drawer sheets
+     Hidden on desktop via CSS; shown only at ≤768px
+══════════════════════════════════════════════════════════ -->
+
+<!-- MOBILE NAV BAR -->
+<nav id="mob-nav" aria-label="Mobile navigation">
+  <button class="mob-tab active" data-drawer="mob-draw-view" onclick="mobTab(this,'mob-draw-view')" aria-label="Viewport">
+    <span class="mob-icon">◈</span>VIEW
+  </button>
+  <button class="mob-tab" data-drawer="mob-draw-params" onclick="mobTab(this,'mob-draw-params')" aria-label="BIM Parameters">
+    <span class="mob-icon">⬡</span>PARAMS
+  </button>
+  <button class="mob-tab" data-drawer="mob-draw-layers" onclick="mobTab(this,'mob-draw-layers')" aria-label="Render Layers">
+    <span class="mob-icon">◎</span>LAYERS
+  </button>
+  <button class="mob-tab" data-drawer="mob-draw-actions" onclick="mobTab(this,'mob-draw-actions')" aria-label="Actions">
+    <span class="mob-icon">▶</span>ACT
+  </button>
+  <button class="mob-tab" data-drawer="mob-draw-log" onclick="mobTab(this,'mob-draw-log')" aria-label="System log">
+    <span class="mob-icon">≋</span>LOG
+  </button>
+</nav>
+
+<!-- DRAWER: VIEW CONTROLS (WS + Holo projector) -->
+<div class="mob-drawer" id="mob-draw-view">
+  <div class="mob-status-strip">
+    <div id="mob-ws-dot2" style="width:7px;height:7px;border-radius:50%;background:var(--ws-off);flex-shrink:0"></div>
+    <span id="mob-ws-text2">WS OFFLINE</span>
+    <button type="button" onclick="connectWS()" style="margin-left:auto;background:rgba(0,210,230,.08);border:1px solid rgba(0,210,230,.25);border-radius:var(--rpill);color:var(--c);font-family:var(--fm);font-size:9px;letter-spacing:1px;padding:4px 12px;cursor:pointer">CONNECT</button>
+  </div>
+  <div class="panel-block">
+    <div class="panel-block-title"><span class="pbt-icon">◉</span> HOLO PROJECTOR</div>
+    <div class="ctrl-row"><label>Alpha</label><input type="range" id="mob-sl-alpha" min="0.1" max="1" value="0.65" step="0.05" oninput="syncSlider('sl-alpha','mob-sl-alpha','v-alpha',this.value)"/><span class="val" id="mob-v-alpha">0.65</span></div>
+    <div class="ctrl-row"><label>Pulse</label><input type="range" id="mob-sl-pulse" min="0.2" max="3" value="1" step="0.1" oninput="syncSlider('sl-pulse','mob-sl-pulse','v-pulse',this.value)"/><span class="val" id="mob-v-pulse">1.0</span></div>
+    <div class="ctrl-row"><label>Glitch</label><input type="range" id="mob-sl-glitch" min="0" max="1" value="0.15" step="0.05" oninput="syncSlider('sl-glitch','mob-sl-glitch','v-glitch',this.value)"/><span class="val" id="mob-v-glitch">0.15</span></div>
+    <div class="ctrl-row"><label>Emissive</label><input type="range" id="mob-sl-emit" min="0" max="2" value="0.8" step="0.1" oninput="syncSlider('sl-emit','mob-sl-emit','v-emit',this.value)"/><span class="val" id="mob-v-emit">0.80</span></div>
+    <div class="ctrl-row"><label>Fog Dense</label><input type="range" id="mob-sl-fog" min="0.01" max="0.1" value="0.035" step="0.005" oninput="updateFog(this.value);document.getElementById('mob-v-fog').textContent=(+this.value).toFixed(3)"/><span class="val" id="mob-v-fog">0.035</span></div>
+  </div>
+  <div class="panel-block" style="margin-bottom:0">
+    <div class="panel-block-title"><span class="pbt-icon">◈</span> VIEW MODE</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <button class="mob-quick-btn primary" onclick="setMode('HOLOGRAM',null)">HOLOGRAM</button>
+      <button class="mob-quick-btn" onclick="setMode('BIM_3D',null)">BIM 3D</button>
+      <button class="mob-quick-btn" onclick="setMode('SECTION',null)">SECTION</button>
+      <button class="mob-quick-btn" onclick="setMode('ANALYSIS',null)">ANALYSIS</button>
+    </div>
+    <div style="margin-top:8px">
+      <div class="toggle-row"><span>Fan / Pepper's Ghost</span>
+        <div class="toggle" id="mob-t-fan" onclick="toggleFanMode();this.classList.toggle('on')"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER: BIM PARAMETERS -->
+<div class="mob-drawer" id="mob-draw-params">
+  <div class="mob-status-strip">
+    <span style="color:var(--c)">◈</span>
+    <span id="mob-sync-text">Awaiting pipeline sync…</span>
+  </div>
+  <div class="panel-block" style="margin-bottom:0">
+    <div class="panel-block-title"><span class="pbt-icon">◈</span> BIM PARAMETERS</div>
+    <div class="ctrl-row"><label>Floors</label><input type="range" id="mob-sl-floors" min="1" max="20" value="3" oninput="syncSlider('sl-floors','mob-sl-floors','v-floors',this.value);document.getElementById('mob-v-floors').textContent=this.value"/><span class="val" id="mob-v-floors">3</span></div>
+    <div class="ctrl-row"><label>Wing Span</label><input type="range" id="mob-sl-span" min="1" max="5" value="2" step="0.5" oninput="syncSlider('sl-span','mob-sl-span','v-span',this.value);document.getElementById('mob-v-span').textContent=(+this.value).toFixed(1)"/><span class="val" id="mob-v-span">2.0</span></div>
+    <div class="ctrl-row"><label>Floor H (m)</label><input type="range" id="mob-sl-height" min="2" max="6" value="3" step="0.5" oninput="syncSlider('sl-height','mob-sl-height','v-height',this.value);document.getElementById('mob-v-height').textContent=(+this.value).toFixed(1)"/><span class="val" id="mob-v-height">3.0</span></div>
+    <div class="ctrl-row"><label>Depth (m)</label><input type="range" id="mob-sl-depth" min="4" max="30" value="10" oninput="syncSlider('sl-depth','mob-sl-depth','v-depth',this.value);document.getElementById('mob-v-depth').textContent=this.value"/><span class="val" id="mob-v-depth">10</span></div>
+    <div class="ctrl-row"><label>Rotation</label><input type="range" id="mob-sl-rot" min="0" max="360" value="30" oninput="syncSlider('sl-rot','mob-sl-rot','v-rot',this.value);document.getElementById('mob-v-rot').textContent=this.value+'°'"/><span class="val" id="mob-v-rot">30°</span></div>
+    <button type="button" class="btn primary" style="margin-top:8px" onclick="triggerBIM()">⬡ GENERATE BIM MODEL</button>
+  </div>
+</div>
+
+<!-- DRAWER: RENDER LAYERS -->
+<div class="mob-drawer" id="mob-draw-layers">
+  <div class="panel-block" style="margin-bottom:0">
+    <div class="panel-block-title"><span class="pbt-icon">◎</span> RENDER LAYERS</div>
+    <div class="toggle-row"><span>Structural Grid</span><div class="toggle on" id="mob-t-grid" onclick="syncToggle('t-grid','mob-t-grid');toggleLayer('grid',document.getElementById('t-grid'))"></div></div>
+    <div class="toggle-row"><span>Floor Slabs</span><div class="toggle on" id="mob-t-slabs" onclick="syncToggle('t-slabs','mob-t-slabs');toggleLayer('slabs',document.getElementById('t-slabs'))"></div></div>
+    <div class="toggle-row"><span>Columns</span><div class="toggle on" id="mob-t-cols" onclick="syncToggle('t-cols','mob-t-cols');toggleLayer('cols',document.getElementById('t-cols'))"></div></div>
+    <div class="toggle-row"><span>Facade Mesh</span><div class="toggle on" id="mob-t-facade" onclick="syncToggle('t-facade','mob-t-facade');toggleLayer('facade',document.getElementById('t-facade'))"></div></div>
+    <div class="toggle-row"><span>Wireframe</span><div class="toggle" id="mob-t-wire" onclick="syncToggle('t-wire','mob-t-wire');toggleLayer('wire',document.getElementById('t-wire'))"></div></div>
+    <div class="toggle-row"><span>Particles</span><div class="toggle on" id="mob-t-particles" onclick="syncToggle('t-particles','mob-t-particles');toggleLayer('particles',document.getElementById('t-particles'))"></div></div>
+    <div class="toggle-row"><span>Hologram Mode</span><div class="toggle on" id="mob-t-holo" onclick="syncToggle('t-holo','mob-t-holo');toggleLayer('holo',document.getElementById('t-holo'))"></div></div>
+    <div class="toggle-row"><span>Ghost Overlay</span><div class="toggle" id="mob-t-ghost" onclick="syncToggle('t-ghost','mob-t-ghost');toggleGhost(document.getElementById('t-ghost'))"></div></div>
+  </div>
+</div>
+
+<!-- DRAWER: ACTIONS -->
+<div class="mob-drawer" id="mob-draw-actions">
+  <div class="mob-quick-row">
+    <button class="mob-quick-btn primary" onclick="triggerBIM()">⬡ GENERATE BIM</button>
+    <button class="mob-quick-btn" onclick="triggerNanoMorph()" style="border-color:rgba(0,240,180,.3);color:rgba(0,240,180,.7)">⬡ NANOMORPH</button>
+    <button class="mob-quick-btn" id="mob-gesture-btn" onclick="toggleGestureEngine();updateMobGestureBtn()">◈ GESTURE OFF</button>
+    <button class="mob-quick-btn" onclick="exportView()">↯ EXPORT PNG</button>
+    <button class="mob-quick-btn" onclick="resetScene()">↺ RESET SCENE</button>
+    <button class="mob-quick-btn danger" onclick="clearAll()">✕ CLEAR ALL</button>
+  </div>
+  <div class="panel-block" style="margin-bottom:0">
+    <div class="panel-block-title"><span class="pbt-icon">◉</span> NANO CONTROLS</div>
+    <div class="ctrl-row"><label>Particles N</label><input type="range" id="mob-sl-nano-n" min="200" max="2000" value="800" step="100" oninput="NanoMorph.setN(+this.value);document.getElementById('mob-v-nano-n').textContent=this.value"/><span class="val" id="mob-v-nano-n">800</span></div>
+    <div class="ctrl-row"><label>Diffusion σ</label><input type="range" id="mob-sl-nano-diff" min="0.001" max="0.08" value="0.018" step="0.001" oninput="NanoMorph.setDiff(+this.value);document.getElementById('mob-v-nano-diff').textContent=(+this.value).toFixed(3)"/><span class="val" id="mob-v-nano-diff">0.018</span></div>
+    <div class="ctrl-row"><label>Speed</label><input type="range" id="mob-sl-nano-spd" min="0.5" max="8" value="2.2" step="0.1" oninput="NanoMorph.setSpeed(+this.value);document.getElementById('mob-v-nano-spd').textContent=(+this.value).toFixed(1)"/><span class="val" id="mob-v-nano-spd">2.2</span></div>
+  </div>
+</div>
+
+<!-- DRAWER: LOG -->
+<div class="mob-drawer" id="mob-draw-log">
+  <div class="mob-status-strip">
+    <span style="color:var(--c)">▤</span> EVENT LOG
+    <span id="mob-log-count" style="margin-left:auto;color:rgba(0,210,230,.3)">0 entries</span>
+  </div>
+  <div id="mob-anno-log" style="font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.36);line-height:2;letter-spacing:.4px;min-height:120px">
+    <div style="color:rgba(0,210,230,.2)">Syncing log…</div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   MOBILE CONTROLLER — KarlCON v16.0
+══════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  const isMobile = () => window.innerWidth <= 768;
+
+  /* ── Tab + Drawer logic ── */
+  let activeDrawer = null;
+
+  window.mobTab = function(btn, drawerId) {
+    if (!isMobile()) return;
+    const drawer = document.getElementById(drawerId);
+    const tabs = document.querySelectorAll('.mob-tab');
+
+    if (activeDrawer === drawerId && drawer.classList.contains('open')) {
+      // Tap same tab = close
+      drawer.classList.remove('open');
+      btn.classList.remove('active');
+      activeDrawer = null;
+      return;
+    }
+
+    // Close any open drawer
+    document.querySelectorAll('.mob-drawer').forEach(d => d.classList.remove('open'));
+    tabs.forEach(t => t.classList.remove('active'));
+
+    // VIEW tab = no drawer, just closes all
+    if (drawerId === 'mob-draw-view') {
+      drawer.classList.add('open');
+    } else {
+      drawer.classList.add('open');
+    }
+    btn.classList.add('active');
+    activeDrawer = drawerId;
+  };
+
+  /* ── Sync slider from mobile → desktop hidden slider ── */
+  window.syncSlider = function(desktopId, _mobId, valId, val) {
+    const ds = document.getElementById(desktopId);
+    const dv = document.getElementById(valId);
+    if (ds) { ds.value = val; ds.dispatchEvent(new Event('input')); }
+    if (dv) dv.textContent = dv.textContent; // value already set by oninput on desktop
+  };
+
+  /* ── Sync toggle from mobile → desktop ── */
+  window.syncToggle = function(desktopId, mobId) {
+    const dt = document.getElementById(desktopId);
+    const mt = document.getElementById(mobId);
+    if (!dt || !mt) return;
+    const nowOn = mt.classList.toggle('on');
+    if (nowOn) dt.classList.add('on'); else dt.classList.remove('on');
+  };
+
+  /* ── Mirror WS status dot to mobile status strip ── */
+  const origWSUpdate = window.updateWSStatus || null;
+  function mirrorWSStatus() {
+    const dot = document.getElementById('ws-dot');
+    const txt = document.getElementById('ws-status-text');
+    const mdot = document.getElementById('mob-ws-dot2');
+    const mtxt = document.getElementById('mob-ws-text2');
+    if (!dot || !mdot) return;
+    mdot.className = dot.className;
+    mdot.style.background = getComputedStyle(dot).background;
+    mdot.style.boxShadow = getComputedStyle(dot).boxShadow;
+    if (txt && mtxt) mtxt.textContent = txt.textContent;
+  }
+
+  /* ── Mirror event log to mobile log drawer ── */
+  function mirrorLog() {
+    if (!isMobile()) return;
+    const src = document.getElementById('anno-log');
+    const dst = document.getElementById('mob-anno-log');
+    const cnt = document.getElementById('mob-log-count');
+    if (!src || !dst) return;
+    dst.innerHTML = src.innerHTML;
+    const entries = dst.querySelectorAll('.log-entry');
+    if (cnt) cnt.textContent = entries.length + ' entries';
+  }
+
+  /* ── Gesture button text mirror ── */
+  window.updateMobGestureBtn = function() {
+    const src = document.getElementById('gesture-toggle-btn');
+    const dst = document.getElementById('mob-gesture-btn');
+    if (src && dst) dst.textContent = src.textContent;
+  };
+
+  /* ── Poll mirrors every 800ms ── */
+  setInterval(() => {
+    if (!isMobile()) return;
+    mirrorWSStatus();
+    mirrorLog();
+    // mirror sync status text
+    const ss = document.getElementById('sync-status-text');
+    const ms = document.getElementById('mob-sync-text');
+    if (ss && ms) ms.textContent = ss.textContent.replace(/<br>/g,' ');
+  }, 800);
+
+  /* ── Swipe-to-close drawers ── */
+  let touchStartY = 0;
+  document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchend', e => {
+    if (!isMobile()) return;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (dy > 60) {
+      // swipe down → close open drawer
+      document.querySelectorAll('.mob-drawer').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
+      // activate VIEW tab
+      const viewTab = document.querySelector('[data-drawer="mob-draw-view"]');
+      if (viewTab) viewTab.classList.add('active');
+      activeDrawer = null;
+    }
+  }, {passive:true});
+
+  /* ── On resize: hide drawers if going desktop ── */
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      document.querySelectorAll('.mob-drawer').forEach(d => d.classList.remove('open'));
+    }
+  });
+
+  /* ── Initial state: VIEW tab active, no drawer open ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!isMobile()) return;
+    const viewTab = document.querySelector('[data-drawer="mob-draw-view"]');
+    if (viewTab) viewTab.classList.add('active');
+    // sync initial slider values from desktop to mobile mirrors
+    const pairs = [
+      ['sl-alpha','mob-sl-alpha'],['sl-pulse','mob-sl-pulse'],['sl-glitch','mob-sl-glitch'],
+      ['sl-emit','mob-sl-emit'],['sl-fog','mob-sl-fog'],['sl-floors','mob-sl-floors'],
+      ['sl-span','mob-sl-span'],['sl-height','mob-sl-height'],['sl-depth','mob-sl-depth'],
+      ['sl-rot','mob-sl-rot']
+    ];
+    pairs.forEach(([did, mid]) => {
+      const d = document.getElementById(did);
+      const m = document.getElementById(mid);
+      if (d && m) m.value = d.value;
+    });
+  });
+
+})();
 </script>
 </body>
 </html>
