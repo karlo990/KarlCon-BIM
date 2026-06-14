@@ -2201,7 +2201,18 @@ function buildBIM(geo){
     depth:        geo.depth        || params.depth,
     holo_colour:  geo.holo_colour  || '#00ffe7',
   });
-  if (WS && WS.readyState === 1) {
+  // FLICKER FIX: Only send bim_update when geometry has actually changed.
+  // Without this guard, every 500ms REST poll → applyGeometry → buildBIM
+  // unconditionally fires a bim_update, causing Pepper's Ghost to rebuild
+  // the full scene ~2Hz indefinitely after WS connects — visible as flicker.
+  const _geoKey = JSON.stringify([
+    window._lastBIMGeo.floor_count, window._lastBIMGeo.floor_height,
+    window._lastBIMGeo.wing_span,   window._lastBIMGeo.depth,
+    window._lastBIMGeo.holo_colour, window._lastBIMGeo.wall_count,
+    window._lastBIMGeo.cache_etag,  window._lastBIMGeo.updated_at,
+  ]);
+  if (WS && WS.readyState === 1 && _geoKey !== window._lastSentGeoKey) {
+    window._lastSentGeoKey = _geoKey;
     try { WS.send(JSON.stringify({ type: 'bim_update', geometry: window._lastBIMGeo })); } catch(e) {}
   }
 
@@ -2278,8 +2289,18 @@ function connectWS(){
     startWSHeartbeat();
     // Push current BIM state to newly connected Pepper's Ghost client
     // Ref: Tanenbaum & Van Steen (2007) §6.3 — push-on-subscribe state replication
+    // Reset sent-key so this initial push goes through, then future sends
+    // are gated by the change-detection guard inside buildBIM.
+    window._lastSentGeoKey = null;
     if (window._lastBIMGeo) {
       try { WS.send(JSON.stringify({ type: 'bim_update', geometry: window._lastBIMGeo })); } catch(e) {}
+      // Record key so the next poll cycle doesn't re-send the same unchanged geo
+      window._lastSentGeoKey = JSON.stringify([
+        window._lastBIMGeo.floor_count, window._lastBIMGeo.floor_height,
+        window._lastBIMGeo.wing_span,   window._lastBIMGeo.depth,
+        window._lastBIMGeo.holo_colour, window._lastBIMGeo.wall_count,
+        window._lastBIMGeo.cache_etag,  window._lastBIMGeo.updated_at,
+      ]);
     }
   };
   WS.onclose = () => {
