@@ -5892,6 +5892,15 @@ function toggleGestureEngine() {
 // PTZ stream is served by karlcon_server_ptz.py (SuperStreamer /screen.mjpeg).
 window.GE_SOURCE  = window.GE_SOURCE  || 'webcam';            // 'webcam' | 'ptz'
 window.GE_PTZ_URL = window.GE_PTZ_URL || (function(){
+  // 1) explicit override via ?ptz=<url>  (persists to localStorage for next visit)
+  var qp = new URLSearchParams(location.search).get('ptz');
+  if (qp) { localStorage.setItem('karlcon_ptz_url', qp); return qp; }
+
+  // 2) previously-saved override (e.g. your Karvision Relay HF Space /screen.mjpeg)
+  var saved = localStorage.getItem('karlcon_ptz_url');
+  if (saved) return saved;
+
+  // 3) fallback — local dev vs same-origin proxy (unchanged default behaviour)
   var host = location.hostname;
   var isLocal = (host === 'localhost' || host === '127.0.0.1' || host === '');
   return isLocal ? 'http://localhost:8765/screen.mjpeg'
@@ -6422,6 +6431,76 @@ window.iconScrollTo = function(el, side) {
   }
 };
 
+</script>
+
+<script>
+(function(){
+  // ---- KarlCON Karvision Relay — connection status badge -------------------
+  // Two-way handshake, viewer side: derives the relay's base URL from
+  // GE_PTZ_URL (e.g. https://your-space.hf.space/screen.mjpeg -> that origin)
+  // and polls /api/status to show whether the local-PC pusher is currently
+  // reaching the relay. The pusher script does the matching handshake on its
+  // side via /api/ping + periodic /api/status checks of its own.
+
+  function relayBaseFromPtzUrl(url) {
+    if (!url) return null;
+    try {
+      var u = new URL(url, location.href);
+      return u.protocol + '//' + u.host;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  var _relayBase = relayBaseFromPtzUrl(window.GE_PTZ_URL);
+  var _statusEl = null;
+
+  function ensureStatusEl() {
+    if (_statusEl) return _statusEl;
+    _statusEl = document.createElement('div');
+    _statusEl.id = 'karlcon-relay-status';
+    _statusEl.style.cssText = [
+      'position:fixed', 'top:8px', 'right:8px', 'z-index:99999',
+      'font-family:monospace', 'font-size:11px', 'padding:4px 9px',
+      'border-radius:4px', 'background:rgba(13,15,18,0.85)',
+      'border:1px solid #00d4c8', 'color:#00d4c8',
+      'pointer-events:none', 'letter-spacing:0.5px',
+      'transition:color 0.2s,border-color 0.2s'
+    ].join(';');
+    _statusEl.textContent = 'PUSHER: CHECKING…';
+    document.body.appendChild(_statusEl);
+    return _statusEl;
+  }
+
+  function setStatus(text, ok) {
+    var el = ensureStatusEl();
+    el.textContent = text;
+    el.style.borderColor = ok ? '#00ffae' : '#ff4d4d';
+    el.style.color = ok ? '#00ffae' : '#ff4d4d';
+  }
+
+  function pollRelay() {
+    if (!_relayBase) return;
+    fetch(_relayBase + '/api/status', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.pusher_connected) {
+          setStatus('PUSHER: CONNECTED (' + Number(j.last_frame_age_s).toFixed(1) + 's)', true);
+        } else {
+          setStatus('PUSHER: OFFLINE', false);
+        }
+      })
+      .catch(function () {
+        setStatus('RELAY: UNREACHABLE', false);
+      });
+  }
+
+  if (_relayBase) {
+    ensureStatusEl();
+    pollRelay();
+    setInterval(pollRelay, 4000);
+  }
+})();
 </script>
 </body>
 </html>
