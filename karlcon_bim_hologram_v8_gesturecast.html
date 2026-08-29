@@ -5441,6 +5441,15 @@ async function startGestureEngine() {
     // Reference: Fetch Living Standard §3.3 "ReadableStream"; WHATWG Encoding.
 
     const PTZ_URL = window.GE_PTZ_URL;
+    // WS view endpoint, derived from the same relay origin as PTZ_URL —
+    // e.g. https://your-space.hf.space/screen.mjpeg -> wss://your-space.hf.space/ws/view
+    const WS_VIEW_URL = (function(){
+      try {
+        var u = new URL(PTZ_URL, location.href);
+        var proto = (u.protocol === 'https:') ? 'wss:' : 'ws:';
+        return proto + '//' + u.host + '/ws/view';
+      } catch (e) { return null; }
+    })();
     const BOUNDARY_PREFIX = new TextEncoder().encode('--karlconframe');
     const CRLF = new TextEncoder().encode('\r\n');
     const PTZ_W = 320, PTZ_H = 240;
@@ -5653,11 +5662,119 @@ async function startGestureEngine() {
       setTimeout(_startFetch, exitReason === 'error' ? 2000 : 1000);
     }
 
-    // Store abort handle so stopGestureEngine() can kill the fetch
-    GE._ptzAbort = () => { if (_ptzAbort) _ptzAbort.abort(); };
+    // ── WS() live path — primary transport ────────────────────────────────
+    // Why this replaces fetch()+MJPEG as the default: a WebSocket is a single
+    // persistent connection that the relay pushes frames into the instant
+    // they arrive (see app.py's _broadcast()). There is no poll interval on
+    // either end, which is what makes low-latency 60-80fps relay actually
+    // possible — the old fetch()/MJPEG path is kept below purely as a
+    // fallback for viewers whose network blocks WS upgrades (some corporate
+    // proxies do), so nothing breaks for them, it's just slower.
+    //
+    // Seamless failover: WS_FAIL_LIMIT consecutive failed connection attempts
+    // (not frame drops — actual failures to establish/keep the socket) trips
+    // the fallback to the legacy fetch() path for the rest of this session.
+    // The canvas/PiP is never cleared on transport switch, so the last frame
+    // stays on screen through the handover instead of flashing to blank.
+    const WS_FAIL_LIMIT = 3;
+    let _wsFailCount = 0;
+    let _wsSocket = null;
+    let _usingFallback = false;
+    let _wsLatencyEma = null;  // exponential moving average, ms
 
-    // Start the fetch-based MJPEG reader
-    _startFetch();
+    function _startWS() {
+      if (!WS_VIEW_URL || _usingFallback) { _startFetch(); return; }
+
+      let opened = false;
+      let sock;
+      try {
+        sock = new WebSocket(WS_VIEW_URL);
+        sock.binaryType = 'arraybuffer';
+      } catch (e) {
+        _wsFailCount++;
+        return _wsRetryOrFallback();
+      }
+      _wsSocket = sock;
+
+      const openTimeout = setTimeout(() => {
+        if (!opened) { try { sock.close(); } catch(_) {} }
+      }, 6000);
+
+      sock.onopen = () => {
+        opened = true;
+        clearTimeout(openTimeout);
+        _wsFailCount = 0;
+        document.getElementById('gesture-pill-text').textContent =
+          'GESTURE ACTIVE · GE-v16 · WS LIVE · ✊ FIST=ROTATE · ◉◉ 2-HAND=ZOOM · AKF+QCF+GSM+WPS';
+        addLog('ok', '[GE-v16] PTZ WebSocket connected — low-latency path active');
+      };
+
+      sock.onmessage = (evt) => {
+        if (!GE.running) return;
+        const buf = evt.data;
+        if (!(buf instanceof ArrayBuffer) || buf.byteLength <= 12) return;
+        const dv = new DataView(buf);
+        // Header: seq (uint32 BE), server_ts_ms (float64 BE) — see app.py HEADER_FMT
+        const serverTsMs = dv.getFloat64(4, false);
+        // Approximate one-way relay latency. Not clock-synced with the
+        // server, so treat as a rough health signal, not a precise metric.
+        const nowMs = Date.now();
+        const sample = nowMs - serverTsMs;
+        if (sample >= 0 && sample < 5000) {
+          _wsLatencyEma = (_wsLatencyEma == null) ? sample : (_wsLatencyEma * 0.9 + sample * 0.1);
+        }
+        const jpegBytes = new Uint8Array(buf, 12);
+        createImageBitmap(new Blob([jpegBytes], { type: 'image/jpeg' }))
+          .then(bitmap => {
+            _ptzFrameN++;
+            if (_ptzFrameN === 1) _ptzErrCount = 0;
+            _dispatchFrame(bitmap);
+          })
+          .catch(() => {});
+      };
+
+      sock.onerror = () => { /* onclose fires right after; handle there */ };
+
+      sock.onclose = () => {
+        clearTimeout(openTimeout);
+        if (_wsSocket === sock) _wsSocket = null;
+        if (!GE.running) return;
+        if (!opened) {
+          _wsFailCount++;
+          return _wsRetryOrFallback();
+        }
+        // Was live, then dropped — reconnect promptly, stay on WS (a single
+        // drop doesn't mean the transport is bad, just that the socket died).
+        addLog('warn', '[GE-v16] PTZ WebSocket dropped — reconnecting');
+        setTimeout(_startWS, 800);
+      };
+    }
+
+    function _wsRetryOrFallback() {
+      if (!GE.running) return;
+      if (_wsFailCount >= WS_FAIL_LIMIT) {
+        _usingFallback = true;
+        addLog('warn', `[GE-v16] WS unreachable after ${WS_FAIL_LIMIT} attempts — `
+                        + 'falling back to MJPEG stream (last frame preserved on screen)');
+        _startFetch();
+        return;
+      }
+      setTimeout(_startWS, Math.min(1000 * _wsFailCount, 4000));
+    }
+
+    // Expose latency + transport for the status badge / debugging
+    GE._ptzLatencyMs = () => _wsLatencyEma;
+    GE._ptzTransport = () => (_usingFallback ? 'mjpeg-fallback' : (_wsSocket ? 'websocket' : 'connecting'));
+
+    // Store abort handle so stopGestureEngine() can kill either transport
+    GE._ptzAbort = () => {
+      if (_ptzAbort) _ptzAbort.abort();
+      if (_wsSocket) { try { _wsSocket.close(); } catch(_) {} }
+    };
+
+    // Start on the low-latency WS path; falls back to fetch()/MJPEG
+    // automatically per the logic above if WS can't be established.
+    _startWS();
 
     // Minimal rAF loop just to keep GE.rafId alive for stopGestureEngine
     function ptzPump() {
