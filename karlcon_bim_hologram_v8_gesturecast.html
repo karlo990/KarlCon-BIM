@@ -1810,15 +1810,22 @@ var KarvisionDepth = (function(){
       } catch (e) {
         console.warn('[KarvisionDepth] model load failed, depth disabled:', e);
         _backend = 'none';
+        _backendFailed = true;  // now this is the ONLY thing that stops retries
         return null;
       }
     })();
     return _sessionLoading;
   }
 
+  var _backendFailed = false;  // set true only after a real load failure — distinct
+                                // from the default 'none', which just means "not
+                                // attempted yet". The old check conflated the two,
+                                // so the very first attempt always bailed before it
+                                // could ever run.
+
   // ---- one depth inference pass on the current _inCanvas -------------------
   async function _runDepth() {
-    if (_busy || _backend === 'none') return;
+    if (_busy || _backendFailed) return;
     var session = await _ensureSession();
     if (!session) return;
     _busy = true;
@@ -1891,6 +1898,12 @@ var KarvisionDepth = (function(){
       opacity: 0.0,           // fades in once the first frame arrives
       depthWrite: true,
       side: THREE.FrontSide,
+      fog: false,             // scene's FogExp2(density 0.035) crushes anything
+                               // past ~50 units to near-black — this plane sits
+                               // at z=-30 with the camera orbiting radius ~30,
+                               // so distance is routinely 55-65 units. Without
+                               // this, opacity can be 1.0 and it still reads as
+                               // empty, indistinguishable from the fog colour.
     });
 
     _mesh = new THREE.Mesh(geo, mat);
