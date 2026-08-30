@@ -1968,10 +1968,50 @@ var KarvisionDepth = (function(){
     return _mesh;
   }
 
+  // ---- orientation controls -------------------------------------------------
+  // Relay/phone frames have been arriving upside-down (see reported hologram
+  // screenshot). Tunable at runtime from the console without a redeploy:
+  //   window.KARVISION_ROTATE_180 = false   // turn the 180° fix off
+  //   window.KARVISION_MIRROR_X   = true    // add a selfie-style horizontal flip
+  function _rotate180() { return window.KARVISION_ROTATE_180 !== false; } // default ON
+  function _mirrorX()   { return !!window.KARVISION_MIRROR_X; }           // default OFF
+
+  // ---- draw a bitmap into a target 2D context using cover-crop framing -----
+  // (like CSS `object-fit:cover`) instead of squishing the whole source frame
+  // into the target box. Center-crops whichever axis has excess so only the
+  // relevant middle of the frame is used — no stray background/edges — while
+  // still filling the target completely, edge-to-edge, with correct aspect
+  // ratio. Also applies the orientation fix above in the same pass.
+  function _drawCover(ctx, bitmap, tw, th) {
+    var sw = bitmap.width, sh = bitmap.height;
+    var srcAspect = sw / sh, dstAspect = tw / th;
+    var cw, ch, cx, cy;
+    if (srcAspect > dstAspect) {
+      // source wider than target -> crop the left/right edges off
+      ch = sh; cw = sh * dstAspect;
+      cx = (sw - cw) / 2; cy = 0;
+    } else {
+      // source taller than target -> crop the top/bottom edges off
+      cw = sw; ch = sw / dstAspect;
+      cx = 0; cy = (sh - ch) / 2;
+    }
+    ctx.save();
+    ctx.clearRect(0, 0, tw, th);
+    if (_rotate180() || _mirrorX()) {
+      ctx.translate(tw / 2, th / 2);
+      if (_rotate180()) ctx.rotate(Math.PI);
+      ctx.scale(_mirrorX() ? -1 : 1, 1);
+      ctx.translate(-tw / 2, -th / 2);
+    }
+    ctx.drawImage(bitmap, cx, cy, cw, ch, 0, 0, tw, th);
+    ctx.restore();
+  }
+
   // ---- public: feed one decoded bitmap in (call from _dispatchFrame) -------
   function pushFrame(bitmap) {
-    // Colour: every frame, cheap.
-    _colorCtx.drawImage(bitmap, 0, 0, W, H);
+    // Colour: every frame, cheap. Cover-crop + orientation-correct so the
+    // backdrop always fills the plane edge-to-edge, right-side-up.
+    _drawCover(_colorCtx, bitmap, W, H);
     if (_colorTexture) {
       _colorTexture.needsUpdate = true;
       if (_mesh && _mesh.material.opacity < 1.0) {
@@ -1979,10 +2019,11 @@ var KarvisionDepth = (function(){
       }
     }
 
-    // Depth: throttled.
+    // Depth: throttled. Same cover-crop/orientation so the displacement map
+    // lines up 1:1 with what's actually on screen.
     _frameN++;
     if (_frameN % DEPTH_EVERY_N === 0) {
-      _inCtx.drawImage(bitmap, 0, 0, W, H);
+      _drawCover(_inCtx, bitmap, W, H);
       _runDepth(); // async, fire-and-forget — never blocks the caller
     }
   }
