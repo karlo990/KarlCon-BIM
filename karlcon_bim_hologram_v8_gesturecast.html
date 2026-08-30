@@ -1265,7 +1265,11 @@ body::before{
     <div class="ticker-inner" id="sys-status-text">◈ SYS ONLINE · THREE.JS r128 · MEDIAPIPE WASM 2-HANDS · GE-v16 · AKF+QCF+GSM · QUATERNION SO(3) · TOUCH-POINTS · FIST-ROTATE · 2-HAND-ZOOM · WPS SCHEDULER · NANOMORPH v8.0</div>
   </div>
   <div id="ws-config-row">
-    <input id="ws-url-input" type="hidden" value="wss://karlcon-karl.hf.space/ws"/>
+    <!-- BIM-metadata WS is a separate backend from the Karvision video relay
+         (confirmed 2026-08-30) and its real host isn't set yet — left blank
+         rather than pointed at a dead placeholder host that looks live but
+         isn't, or at the video relay which doesn't serve this endpoint. -->
+    <input id="ws-url-input" type="hidden" value=""/>
     <button type="button" class="btn-xs" onclick="connectWS()">◇ CONNECT</button>
     <button type="button" class="btn-xs" id="bim-redirect-btn" onclick="openBIMPipeline()" style="border-color:rgba(0,210,120,.35);color:rgba(0,230,140,.8);background:rgba(0,180,100,.06);margin-left:4px">⬡ BIM PIPELINE</button>
   </div>
@@ -1936,13 +1940,20 @@ var KarvisionDepth = (function(){
 // KarlCON: Docker backend URL resolver
 // Set DOCKER_URL to your local Docker machine e.g. http://192.168.1.10:7860
 (function(){
-  var HF = 'https://karlcon-karl.hf.space';
-  window._KARLCON_DOCKER_URL = HF;
-  window._REST_BASE_OVERRIDE = HF + '/pipeline';
-  window._KARLCON_HF_BASE    = HF;
+  // BIM model-decode REST pipeline is a separate backend from the Karvision
+  // video relay (confirmed 2026-08-30) and its real host isn't set yet.
+  // Previously hardcoded to karlcon-karl.hf.space, which is what produced
+  // the repeated "GET .../pipeline/model/pipeline 503" console errors —
+  // that host either never ran this API or is dead. Left null so REST_BASE
+  // resolves to nothing until the real backend URL is supplied via
+  // ?hfSpace=, a data-hf-space meta tag, or window.KARLCON_HF_SPACE, rather
+  // than quietly retrying a wrong host forever.
+  window._KARLCON_DOCKER_URL = null;
+  window._REST_BASE_OVERRIDE = null;
+  window._KARLCON_HF_BASE    = null;
 })();
 Object.defineProperty(window, 'REST_BASE', {
-  get: function(){ return window._REST_BASE_OVERRIDE || 'https://karlcon-karl.hf.space/pipeline'; },
+  get: function(){ return window._REST_BASE_OVERRIDE || null; },
   configurable: true
 });
 let WS           = null;
@@ -2532,7 +2543,11 @@ function disconnectWS(){
 
 // ── HF Space config ──────────────────────────────────────────────────────────
 // Called when user clicks ✓ SET — persists HF Space URL and rewires REST + WS.
-function applyHFSpace(){ addLog("ok","Backend → https://karlcon-karl.hf.space"); connectWS(); }
+function applyHFSpace(){
+  var base = window._KARLCON_HF_BASE || window._REST_BASE_OVERRIDE;
+  addLog(base ? "ok" : "warn", base ? ("Backend → " + base) : "Backend not configured — set ?hfSpace= or window.KARLCON_HF_SPACE");
+  connectWS();
+}
 
 // ── BIM Pipeline redirect ────────────────────────────────────────────────────
 // Opens the BIM pipeline HTML served from HF Space /hologram.
@@ -6220,11 +6235,15 @@ window.GE_PTZ_URL = window.GE_PTZ_URL || (function(){
   var saved = localStorage.getItem('karlcon_ptz_url');
   if (saved) return saved;
 
-  // 3) fallback — local dev vs same-origin proxy (unchanged default behaviour)
+  // 3) fallback — local dev vs the confirmed live Karvision Relay Space.
+  // Verified 2026-08-30: Davincii-code/Karvision on Hugging Face is the
+  // relay this project actually uses (matches app.py byte-for-byte, status
+  // Running). The previous default here fell back to same-origin /mjpeg,
+  // which Vercel never proxies — that silently pointed nowhere in prod.
   var host = location.hostname;
   var isLocal = (host === 'localhost' || host === '127.0.0.1' || host === '');
   return isLocal ? 'http://localhost:8765/screen.mjpeg'
-                  : location.protocol + '//' + location.host + '/mjpeg';
+                  : 'https://davincii-code-karvision.hf.space/screen.mjpeg';
 })();
 
 function toggleGestureSource() {
