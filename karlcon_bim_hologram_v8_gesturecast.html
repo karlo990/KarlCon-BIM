@@ -1348,7 +1348,6 @@ body::before{
       <button type="button" class="btn gesture-btn" id="gesture-toggle-btn" onclick="toggleGestureEngine()">◈ GESTURE CONTROL: OFF</button>
       <button type="button" class="btn" id="gesture-source-btn" onclick="toggleGestureSource()" title="Switch gesture input between PC webcam and PTZ phone stream (karlcon_server_ptz.py /screen.mjpeg)" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ GESTURE SOURCE: WEBCAM</button>
       <button type="button" class="btn" id="pip-toggle-btn" onclick="togglePiP(document.getElementById('t-pip'))" title="Show/hide the gesture camera preview (with hand landmark overlay)" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ SHOW GESTURE PREVIEW</button>
-      <button type="button" class="btn" id="relay-gesture-btn" onclick="toggleRelayGesture()" title="Drive the model from the Python gesture tracker's quaternion/curl data via the HF Space relay, instead of in-browser MediaPipe. Falls back automatically if the relay's gesture channel drops." style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ RELAY GESTURE: OFF</button>
       <button type="button" class="btn" id="calibrate-btn" onclick="startCalibration()" title="70-second guided session to collect 70 samples per gesture and warm-start the classifier" style="display:none;border-color:rgba(212,170,60,.35);color:rgba(212,170,60,.65);background:rgba(212,170,60,.04)">◈ CALIBRATE GESTURES</button>
       <button type="button" class="btn" id="fan-mode-btn" onclick="toggleFanMode()" title="Split canvas into 4 rotated views for Pepper's Ghost pyramid display" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ FAN OFF</button>
       <button type="button" class="btn" onclick="exportView()">↯ EXPORT PNG SNAPSHOT</button>
@@ -1969,50 +1968,10 @@ var KarvisionDepth = (function(){
     return _mesh;
   }
 
-  // ---- orientation controls -------------------------------------------------
-  // Relay/phone frames have been arriving upside-down (see reported hologram
-  // screenshot). Tunable at runtime from the console without a redeploy:
-  //   window.KARVISION_ROTATE_180 = false   // turn the 180° fix off
-  //   window.KARVISION_MIRROR_X   = true    // add a selfie-style horizontal flip
-  function _rotate180() { return window.KARVISION_ROTATE_180 !== false; } // default ON
-  function _mirrorX()   { return !!window.KARVISION_MIRROR_X; }           // default OFF
-
-  // ---- draw a bitmap into a target 2D context using cover-crop framing -----
-  // (like CSS `object-fit:cover`) instead of squishing the whole source frame
-  // into the target box. Center-crops whichever axis has excess so only the
-  // relevant middle of the frame is used — no stray background/edges — while
-  // still filling the target completely, edge-to-edge, with correct aspect
-  // ratio. Also applies the orientation fix above in the same pass.
-  function _drawCover(ctx, bitmap, tw, th) {
-    var sw = bitmap.width, sh = bitmap.height;
-    var srcAspect = sw / sh, dstAspect = tw / th;
-    var cw, ch, cx, cy;
-    if (srcAspect > dstAspect) {
-      // source wider than target -> crop the left/right edges off
-      ch = sh; cw = sh * dstAspect;
-      cx = (sw - cw) / 2; cy = 0;
-    } else {
-      // source taller than target -> crop the top/bottom edges off
-      cw = sw; ch = sw / dstAspect;
-      cx = 0; cy = (sh - ch) / 2;
-    }
-    ctx.save();
-    ctx.clearRect(0, 0, tw, th);
-    if (_rotate180() || _mirrorX()) {
-      ctx.translate(tw / 2, th / 2);
-      if (_rotate180()) ctx.rotate(Math.PI);
-      ctx.scale(_mirrorX() ? -1 : 1, 1);
-      ctx.translate(-tw / 2, -th / 2);
-    }
-    ctx.drawImage(bitmap, cx, cy, cw, ch, 0, 0, tw, th);
-    ctx.restore();
-  }
-
   // ---- public: feed one decoded bitmap in (call from _dispatchFrame) -------
   function pushFrame(bitmap) {
-    // Colour: every frame, cheap. Cover-crop + orientation-correct so the
-    // backdrop always fills the plane edge-to-edge, right-side-up.
-    _drawCover(_colorCtx, bitmap, W, H);
+    // Colour: every frame, cheap.
+    _colorCtx.drawImage(bitmap, 0, 0, W, H);
     if (_colorTexture) {
       _colorTexture.needsUpdate = true;
       if (_mesh && _mesh.material.opacity < 1.0) {
@@ -2020,11 +1979,10 @@ var KarvisionDepth = (function(){
       }
     }
 
-    // Depth: throttled. Same cover-crop/orientation so the displacement map
-    // lines up 1:1 with what's actually on screen.
+    // Depth: throttled.
     _frameN++;
     if (_frameN % DEPTH_EVERY_N === 0) {
-      _drawCover(_inCtx, bitmap, W, H);
+      _inCtx.drawImage(bitmap, 0, 0, W, H);
       _runDepth(); // async, fire-and-forget — never blocks the caller
     }
   }
@@ -6500,200 +6458,6 @@ function togglePiP(el) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RELAY GESTURE CHANNEL — consumes the Python tracker's fused SO(3)
-// quaternion + finger-curl + gesture-class JSON via the HF Space relay
-// (/ws/gview), instead of running a second, coarser MediaPipe pass in the
-// browser. This is a data source, not a video source: it does NOT touch
-// startGestureEngine()'s webcam/PTZ frame acquisition at all — it drives
-// the same downstream state (window._objOmegaX/Y, window._objDScale, the
-// BIM param sliders) that the local engine's own handlers already write
-// to (see applyWipeCamera / the 2-hand-zoom handler above). Relay-driven
-// and local in-browser control both write that same state, so running
-// both at once means two sources fighting over one frame's rotation —
-// toggleRelayGesture() stops the local engine first, same as
-// toggleGestureSource() already does when switching input source.
-// ═══════════════════════════════════════════════════════════════════════════
-
-window._relayGesture = {
-  enabled: false,
-  ws: null,
-  reconnectTimer: null,
-  paramFrameCounter: 0,   // throttles slider-driven BIM rebuilds
-  prevPinch: {},          // per-hand previous pinch_dist, for zoom delta
-};
-
-function _relayGestureBase() {
-  var url = window.GE_PTZ_URL;
-  if (!url) return null;
-  try {
-    var u = new URL(url, location.href);
-    return u.protocol + '//' + u.host;
-  } catch (e) {
-    return null;
-  }
-}
-
-function connectGestureRelay() {
-  var base = _relayGestureBase();
-  if (!base) {
-    addLog('err', '[RELAY-GESTURE] No relay base — set GE_PTZ_URL / ?ptz= first.');
-    return;
-  }
-  var wsUrl = base.replace(/^http/, 'ws') + '/ws/gview';
-
-  var rg = window._relayGesture;
-  if (rg.ws) { try { rg.ws.close(); } catch (e) {} }
-
-  var ws = new WebSocket(wsUrl);
-  rg.ws = ws;
-
-  ws.onopen = () => addLog('ok', `[RELAY-GESTURE] Connected (${wsUrl})`);
-  ws.onmessage = (ev) => {
-    if (!window._relayGesture.enabled) return; // ignore stray messages after user disables
-    try {
-      applyRemoteGestureFrame(JSON.parse(ev.data));
-    } catch (e) {
-      addLog('warn', `[RELAY-GESTURE] Bad payload: ${e}`);
-    }
-  };
-  ws.onclose = () => {
-    addLog('warn', '[RELAY-GESTURE] Channel closed.');
-    if (window._relayGesture.enabled) {
-      // Auto-retry while the user still wants relay control, mirroring the
-      // video pusher's own reconnect behaviour — a transient relay drop
-      // shouldn't require the user to notice and manually re-toggle.
-      window._relayGesture.reconnectTimer = setTimeout(connectGestureRelay, 2000);
-    }
-  };
-  ws.onerror = () => { /* onclose fires right after; handled there */ };
-}
-
-function disconnectGestureRelay() {
-  var rg = window._relayGesture;
-  if (rg.reconnectTimer) { clearTimeout(rg.reconnectTimer); rg.reconnectTimer = null; }
-  if (rg.ws) { try { rg.ws.close(); } catch (e) {} rg.ws = null; }
-}
-
-function toggleRelayGesture() {
-  const btn = document.getElementById('relay-gesture-btn');
-  const rg = window._relayGesture;
-
-  if (rg.enabled) {
-    rg.enabled = false;
-    disconnectGestureRelay();
-    btn.textContent = '◈ RELAY GESTURE: OFF';
-    btn.classList.remove('active');
-    setGestureLED('on');
-    addLog('ok', '[RELAY-GESTURE] Disabled.');
-  } else {
-    if (GE.running) {
-      stopGestureEngine();
-      document.getElementById('gesture-toggle-btn').textContent = '◈ GESTURE CONTROL: OFF';
-      document.getElementById('gesture-toggle-btn').classList.remove('active');
-    }
-    rg.enabled = true;
-    rg.paramFrameCounter = 0;
-    rg.prevPinch = {};
-    btn.textContent = '◈ RELAY GESTURE: ON';
-    btn.classList.add('active');
-    setGestureLED('tracking');
-    addLog('ok', '[RELAY-GESTURE] Enabled — connecting…');
-    connectGestureRelay();
-  }
-}
-
-// ── Rule table: Python-tracked gesture -> BIM / rotation modification ─────
-// Writes to the SAME state the local FIST-rotate / 2-hand-zoom handlers
-// use (window._objOmegaX/Y, window._objDScale), so animate()'s existing
-// damped-integration loop (β≈0.96, see applyWipeCamera above) picks these
-// up with zero further changes on that side.
-function applyRemoteGestureFrame(payload) {
-  const hands = payload.hands || [];
-  if (hands.length === 0) return;
-
-  window._relayGesture.paramFrameCounter++;
-  // Slider-driven BIM rebuilds (updateParam on floors/span/height/depth/rot)
-  // trigger a full buildBIM() — expensive at relay rate (~30Hz). Throttle
-  // those to ~10Hz; the rotation/zoom impulses below stay at full rate
-  // since they're cheap additive nudges, not rebuilds.
-  const doParamUpdate = (window._relayGesture.paramFrameCounter % 3 === 0);
-
-  for (const h of hands) {
-    switch (h.gesture) {
-
-      case 'FIST': {
-        // Continuous wrist-delta drag — same role as the local drag
-        // handler (window._objOmegaY += dxM * 0.004, above) but fed by
-        // the Python tracker's already-smoothed delta.
-        window._objStopped = false;
-        window._lastInteractMs = performance.now();
-        window._objOmegaY += (h.delta.dx || 0) * 0.05;
-        window._objOmegaX += (h.delta.dy || 0) * 0.05;
-        setGestureLED('active-move');
-        break;
-      }
-
-      case 'PINCH': {
-        // Pinch distance -> zoom, same ΔS-into-_objDScale physics as the
-        // existing 2-hand zoom handler (K_ZOOM=1.5, above), but usable
-        // one-handed since the tracker isolates pinch_dist directly
-        // instead of needing two tracked wrists.
-        const prev = window._relayGesture.prevPinch[h.hand];
-        if (prev != null) {
-          const delta = h.pinch_dist - prev; // opening = positive = zoom out
-          window._objDScale += delta * 1.5;  // same K_ZOOM gain as 2-hand zoom
-        }
-        window._relayGesture.prevPinch[h.hand] = h.pinch_dist;
-        setGestureLED('active-move');
-        break;
-      }
-
-      case 'TAP': {
-        // dz-velocity spike = discrete commit gesture. Logged only by
-        // default — bind to whatever "confirm" action fits your workflow
-        // (e.g. startCalibration()) rather than assuming one here.
-        addLog('ok', `[RELAY-GESTURE] TAP (${h.hand})`);
-        break;
-      }
-
-      case 'OPEN':
-      case 'POINT':
-      case 'OTHER':
-      default: {
-        // Flat/tracked palm, no discrete gesture this frame: use the
-        // continuous SO(3) orientation the local browser engine never
-        // had. Yaw component of the fused quaternion drives the
-        // Rotation slider directly — needs the Python-side Kabsch +
-        // anatomical-basis fusion, not reachable from wrist position alone.
-        if (doParamUpdate && h.orientation && h.orientation.euler_deg_xyz) {
-          const yawRaw = h.orientation.euler_deg_xyz[1]; // [pitch, yaw, roll]
-          const yaw = ((yawRaw % 360) + 360) % 360;
-          const slRot = document.getElementById('sl-rot');
-          const clamped = Math.max(+slRot.min, Math.min(+slRot.max, yaw));
-          slRot.value = clamped;
-          updateParam('rot', clamped);
-        }
-
-        // Index-finger PIP flexion -> Wing Span, a continuous analog
-        // control the discrete FIST/OPEN classifier alone can't drive.
-        // fingers_curl_deg.index = [angle_at_PIP, angle_at_DIP] (see
-        // finger_curl_angles / FINGER_CHAINS in the tracker); PIP (index
-        // 0) is the dominant flexion joint for "how curled is this finger".
-        if (doParamUpdate && h.fingers_curl_deg && h.fingers_curl_deg.index) {
-          const curlPip = h.fingers_curl_deg.index[0] ?? 0; // deg, ~0 straight .. ~90+ curled
-          const slSpan = document.getElementById('sl-span');
-          const spanMin = +slSpan.min, spanMax = +slSpan.max;
-          const t = Math.max(0, Math.min(1, curlPip / 90));
-          const span = spanMax - t * (spanMax - spanMin); // straight->max span, curled->min span
-          slSpan.value = span.toFixed(1);
-          updateParam('span', span);
-        }
-      }
-    }
-  }
-}
-
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PATCH initThree — expose theta/phi/radius to window scope so gesture
@@ -7261,23 +7025,6 @@ window.iconScrollTo = function(el, side) {
           setStatus('PUSHER: CONNECTED (' + Number(j.last_frame_age_s).toFixed(1) + 's)' + depthTxt, true);
         } else {
           setStatus('PUSHER: OFFLINE' + depthTxt, false);
-        }
-
-        // Gesture-channel health, alongside the video pusher's own badge.
-        // If relay-driven control is ON but the tracker's gesture pusher
-        // has gone stale, don't leave the model silently frozen mid-air —
-        // warn once and drop back to local in-browser MediaPipe control
-        // automatically, same "never leave the user stuck" principle the
-        // video side already follows via PUSHER: OFFLINE.
-        if (window._relayGesture && window._relayGesture.enabled && !j.gesture_pusher_connected) {
-          if (!window._relayGesture._staleWarned) {
-            window._relayGesture._staleWarned = true;
-            addLog('warn', '[RELAY-GESTURE] Tracker gesture feed stale — falling back to local MediaPipe.');
-            toggleRelayGesture();       // turns relay control OFF
-            toggleGestureEngine();      // turns local in-browser engine ON
-          }
-        } else if (window._relayGesture) {
-          window._relayGesture._staleWarned = false;
         }
       })
       .catch(function () {
