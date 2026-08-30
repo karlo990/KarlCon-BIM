@@ -1966,6 +1966,9 @@ var KarvisionRelayIngest = (function(){
     } catch (e) { return null; }
   }
 
+  var _decodeErrs = 0;
+  var _lastDecodeErr = null;
+
   function _onMessage(evt) {
     if (!(evt.data instanceof ArrayBuffer)) return; // ignore any text/JSON pings
     var buf = evt.data;
@@ -1978,7 +1981,19 @@ var KarvisionRelayIngest = (function(){
         KarvisionDepth.pushFrame(bitmap);
       }
       bitmap.close();
-    }).catch(function(e){ /* occasional truncated frame during reconnect — skip silently */ });
+    }).catch(function(e){
+      // DIAGNOSTIC (temporary): this used to swallow every decode failure
+      // silently, which is exactly what made "frames arriving but nothing
+      // renders" indistinguishable from "frames never arriving" from the
+      // outside. Log the first few so the actual cause (bad byte offset,
+      // unsupported JPEG variant, truncated payload) is visible in console
+      // instead of guessed at.
+      _decodeErrs++;
+      _lastDecodeErr = e && e.message ? e.message : String(e);
+      if (_decodeErrs <= 5 || _decodeErrs % 50 === 0) {
+        console.error('[KarvisionRelayIngest] bitmap decode failed (#' + _decodeErrs + ', bufLen=' + buf.byteLength + '):', e);
+      }
+    });
   }
 
   function _connect() {
@@ -2006,8 +2021,10 @@ var KarvisionRelayIngest = (function(){
   function start() { _stopped = false; _connect(); }
   function stop()  { _stopped = true; if (_ws) { try { _ws.close(); } catch(e){} } }
   function framesReceived() { return _framesIn; }
+  function decodeErrors() { return _decodeErrs; }
+  function lastDecodeError() { return _lastDecodeErr; }
 
-  return { start: start, stop: stop, framesReceived: framesReceived };
+  return { start: start, stop: stop, framesReceived: framesReceived, decodeErrors: decodeErrors, lastDecodeError: lastDecodeError };
 })();
 
 // Auto-start on load — background visualisation should not require the
@@ -6924,6 +6941,15 @@ window.iconScrollTo = function(el, side) {
         var depthTxt = '';
         if (typeof KarvisionDepth !== 'undefined' && KarvisionDepth.isReady()) {
           depthTxt = ' · DEPTH:' + KarvisionDepth.backend().toUpperCase();
+        }
+        // DIAGNOSTIC (temporary): shows whether frames the relay says it sent
+        // are actually decoding in this browser. IN should track relay's
+        // frames_received 1:1 within a second or two; ERR>0 means
+        // createImageBitmap is rejecting the JPEG bytes we're slicing out.
+        if (typeof KarvisionRelayIngest !== 'undefined') {
+          depthTxt += ' · IN:' + KarvisionRelayIngest.framesReceived();
+          var errs = KarvisionRelayIngest.decodeErrors();
+          if (errs > 0) depthTxt += ' · ERR:' + errs;
         }
         if (j.pusher_connected) {
           setStatus('PUSHER: CONNECTED (' + Number(j.last_frame_age_s).toFixed(1) + 's)' + depthTxt, true);
