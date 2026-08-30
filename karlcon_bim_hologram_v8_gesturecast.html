@@ -1877,14 +1877,58 @@ var KarvisionDepth = (function(){
     geo.computeVertexNormals();
   }
 
-  // ---- public: called once from initThree() to build the plane -------------
-  function attachToScene(scene, opts) {
-    opts = opts || {};
-    var width = opts.width  != null ? opts.width  : 60;
-    var height = opts.height != null ? opts.height : 40;
-    var z = opts.z != null ? opts.z : -30; // well behind the hologram
+  var _camera = null;
+  var _localZ = -40;  // fixed depth in camera-local space (camera looks down -Z)
 
-    var geo = new THREE.PlaneGeometry(width, height, SEGMENTS_X, SEGMENTS_Y);
+  // ---- public: (re)size the plane to exactly fill the camera frustum at
+  // its fixed camera-local depth. Called once at attach time and again on
+  // every resize/aspect change — NOT per-frame, since a camera-parented
+  // plane's screen coverage only changes when FOV/aspect change, never when
+  // the user orbits (orbiting moves the whole camera+plane rig together).
+  //
+  // Derivation (standard perspective-camera frustum geometry — see e.g. MIT
+  // 6.837 Computer Graphics, "Cameras & the Graphics Pipeline" lecture notes,
+  // and Akenine-Möller/Haines/Hoffman, Real-Time Rendering 4th ed. §4.6 on
+  // view-frustum construction): for a symmetric frustum with vertical field
+  // of view θ, the visible height at perpendicular distance d from the eye is
+  //     h(d) = 2 · d · tan(θ / 2)
+  // and visible width follows from the viewport aspect ratio a = w/h:
+  //     w(d) = h(d) · a
+  // Placing a plane of exactly (w(d), h(d)) at local distance d from a camera
+  // — and parenting it to that camera — guarantees full-frustum coverage
+  // (a "screen-filling backdrop") independent of where the camera orbits in
+  // world space, because it's the SAME rigid transform for both. This is the
+  // same construction used for skybox/environment backdrops in real-time
+  // renderers: geometry fixed in camera space, decoupled from world-space
+  // scene depth entirely.
+  function _resizeToFrustum() {
+    if (!_mesh || !_camera) return;
+    var vFOV = THREE.MathUtils.degToRad(_camera.fov);
+    var h = 2 * Math.abs(_localZ) * Math.tan(vFOV / 2);
+    var w = h * _camera.aspect;
+    _mesh.geometry.dispose();
+    _mesh.geometry = new THREE.PlaneGeometry(w, h, SEGMENTS_X, SEGMENTS_Y);
+    _basePositions = new Float32Array(_mesh.geometry.attributes.position.count);
+    for (var i = 0; i < _basePositions.length; i++) _basePositions[i] = 0;
+  }
+
+  // ---- public: called once from initThree() to build the plane -------------
+  // Parented to the CAMERA, not the scene, and drawn with depthTest/depthWrite
+  // off + a very negative renderOrder — i.e. treated as a pure backdrop that
+  // is guaranteed to (a) fill the full viewport at any orbit distance and
+  // (b) never occlude or z-fight with the hologram object, which is exactly
+  // the "object rendered in front of the image" requirement: nothing else in
+  // the scene needs to know this plane exists for correct draw order.
+  function attachToScene(scene, camera, opts) {
+    opts = opts || {};
+    _camera = camera;
+    _localZ = opts.localZ != null ? opts.localZ : -40;
+
+    var vFOV = THREE.MathUtils.degToRad(camera.fov);
+    var h = 2 * Math.abs(_localZ) * Math.tan(vFOV / 2);
+    var w = h * camera.aspect;
+
+    var geo = new THREE.PlaneGeometry(w, h, SEGMENTS_X, SEGMENTS_Y);
     _basePositions = new Float32Array(geo.attributes.position.count);
     for (var i = 0; i < _basePositions.length; i++) _basePositions[i] = 0;
 
@@ -1896,8 +1940,12 @@ var KarvisionDepth = (function(){
       map: _colorTexture,
       transparent: true,
       opacity: 0.0,           // fades in once the first frame arrives
-      depthWrite: true,
+      depthWrite: false,      // pure backdrop — never occludes, never z-fights
+      depthTest: false,       // and never gets occluded by draw-order accident
       side: THREE.FrontSide,
+      fog: false,             // fog is meant for world-space depth cues; this
+                               // plane has no meaningful "distance" once it's
+                               // camera-parented, so exempt it entirely
       fog: false,             // scene's FogExp2(density 0.035) crushes anything
                                // past ~50 units to near-black — this plane sits
                                // at z=-30 with the camera orbiting radius ~30,
@@ -1907,9 +1955,16 @@ var KarvisionDepth = (function(){
     });
 
     _mesh = new THREE.Mesh(geo, mat);
-    _mesh.position.z = z;
-    _mesh.renderOrder = -1;   // always draw before the hologram, cheap sort hint
-    scene.add(_mesh);
+    _mesh.position.set(0, 0, _localZ);
+    _mesh.renderOrder = -9999;   // draw dead first — pure backdrop, nothing
+                                  // in the scene needs draw-order awareness
+                                  // of it to correctly appear "in front"
+    camera.add(_mesh);           // parent to the CAMERA, not the scene — see
+                                  // note above; this is what makes it a rigid
+                                  // full-frustum backdrop instead of a
+                                  // world-space object competing for depth
+    if (!camera.parent) scene.add(camera); // camera must be in the graph for
+                                            // its children to render at all
     return _mesh;
   }
 
@@ -1940,6 +1995,7 @@ var KarvisionDepth = (function(){
     pushFrame: pushFrame,
     backend: backend,
     isReady: isReady,
+    resize: _resizeToFrustum,
   };
 })();
 
@@ -2286,13 +2342,14 @@ function initThree(){
   // from _dispatchFrame() via KarvisionDepth.pushFrame(); invisible (opacity 0)
   // until the first relay frame arrives, so it never shows a grey placeholder.
   if (typeof KarvisionDepth !== 'undefined') {
-    KarvisionDepth.attachToScene(scene, { width: 60, height: 40, z: -30 });
+    KarvisionDepth.attachToScene(scene, camera, { localZ: -40 });
   }
 
   window.addEventListener('resize', ()=>{
     const W2=vp.clientWidth, H2=vp.clientHeight;
     camera.aspect=W2/H2; camera.updateProjectionMatrix();
     renderer.setSize(W2,H2);
+    if (typeof KarvisionDepth !== 'undefined') KarvisionDepth.resize();
   });
 
   buildFanCameras();
