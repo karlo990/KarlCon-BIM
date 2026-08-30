@@ -1929,6 +1929,93 @@ var KarvisionDepth = (function(){
     isReady: isReady,
   };
 })();
+
+// ─── KarvisionRelayIngest — standalone /ws/view consumer ──────────────────────
+// PROBLEM THIS FIXES: the only thing in this page that ever called
+// KarvisionDepth.pushFrame() was the PTZ branch inside startGestureEngine(),
+// which (a) requires the user to manually toggle "GESTURE CONTROL: ON" and
+// (b) defaults window.GE_SOURCE to 'webcam', not 'ptz' — so the relay's
+// frames could be flowing perfectly (status badge shows PUSHER: CONNECTED,
+// FRAMES RECEIVED climbing) while literally nothing in the browser ever
+// asked the relay for a single frame. That's exactly the symptom reported:
+// connection healthy, background never appears, DEPTH:NONE forever.
+//
+// Visualising the live background has nothing to do with hand-gesture
+// tracking, so this connects to /ws/view directly and unconditionally —
+// no dependency on GE.running, GE_SOURCE, or MediaPipe loading at all.
+// It reuses the exact same relay origin resolution as GE_PTZ_URL so the
+// two paths can never point at different Spaces by accident.
+//
+// Wire format from app.py's /ws/view (verified against source): each binary
+// WS message is a 12-byte header (>I = uint32 seq big-endian, d = float64
+// server_ts_ms) immediately followed by the raw JPEG bytes for that frame.
+var KarvisionRelayIngest = (function(){
+  var HEADER_BYTES = 12;
+  var _ws = null;
+  var _framesIn = 0;
+  var _reconnectMs = 1000;
+  var _stopped = false;
+
+  function _relayWsViewUrl() {
+    var ptz = window.GE_PTZ_URL;
+    if (!ptz) return null;
+    try {
+      var u = new URL(ptz, location.href);
+      var proto = (u.protocol === 'https:') ? 'wss:' : 'ws:';
+      return proto + '//' + u.host + '/ws/view';
+    } catch (e) { return null; }
+  }
+
+  function _onMessage(evt) {
+    if (!(evt.data instanceof ArrayBuffer)) return; // ignore any text/JSON pings
+    var buf = evt.data;
+    if (buf.byteLength <= HEADER_BYTES) return;
+    var jpegBytes = new Uint8Array(buf, HEADER_BYTES);
+    var blob = new Blob([jpegBytes], { type: 'image/jpeg' });
+    createImageBitmap(blob).then(function(bitmap){
+      _framesIn++;
+      if (typeof KarvisionDepth !== 'undefined') {
+        KarvisionDepth.pushFrame(bitmap);
+      }
+      bitmap.close();
+    }).catch(function(e){ /* occasional truncated frame during reconnect — skip silently */ });
+  }
+
+  function _connect() {
+    if (_stopped) return;
+    var url = _relayWsViewUrl();
+    if (!url) { setTimeout(_connect, 2000); return; } // GE_PTZ_URL not resolved yet
+    try {
+      _ws = new WebSocket(url);
+      _ws.binaryType = 'arraybuffer';
+      _ws.onmessage = _onMessage;
+      _ws.onopen = function(){ _reconnectMs = 1000; };
+      _ws.onclose = _scheduleReconnect;
+      _ws.onerror = function(){ try { _ws.close(); } catch(e){} };
+    } catch (e) {
+      _scheduleReconnect();
+    }
+  }
+
+  function _scheduleReconnect() {
+    if (_stopped) return;
+    setTimeout(_connect, _reconnectMs);
+    _reconnectMs = Math.min(_reconnectMs * 1.6, 15000);
+  }
+
+  function start() { _stopped = false; _connect(); }
+  function stop()  { _stopped = true; if (_ws) { try { _ws.close(); } catch(e){} } }
+  function framesReceived() { return _framesIn; }
+
+  return { start: start, stop: stop, framesReceived: framesReceived };
+})();
+
+// Auto-start on load — background visualisation should not require the
+// gesture engine, MediaPipe, or any manual toggle. initThree() runs on
+// DOMContentLoaded elsewhere in this file; KarvisionDepth.attachToScene()
+// is called from inside it, so by the time frames arrive the background
+// plane already exists in the scene graph.
+window.addEventListener('DOMContentLoaded', function(){ KarvisionRelayIngest.start(); });
 </script>
 <!-- TWEEN.js (Sony open-source animation engine — embedded) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
