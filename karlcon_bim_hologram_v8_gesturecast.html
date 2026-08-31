@@ -3099,51 +3099,85 @@ const MeshyPipeline = (() => {
         return resolve(null);
       }
       const loader = new THREE.GLTFLoader();
-      loader.load(
-        proxiedAssetUrl(glbUrl),
-        (gltf) => {
-          // Remove any previously loaded Meshy model before adding the new one
-          if (window.meshyGroup) { scene.remove(window.meshyGroup); window.meshyGroup = null; }
+      const url = proxiedAssetUrl(glbUrl);
 
-          const group = new THREE.Group();
-          group.add(gltf.scene);
+      // Fetch manually first instead of handing the URL straight to
+      // GLTFLoader.load(). Three.js r128's loader uses a plain XHR under
+      // the hood and, on a bad status or network error, just forwards the
+      // raw ProgressEvent to onError — which is why failures were showing
+      // up as the useless "[object ProgressEvent]" instead of the actual
+      // HTTP status or error text. Fetching ourselves gives us the real
+      // status/body to report, then we hand the bytes to loader.parse()
+      // instead of loader.load().
+      fetch(url, { cache: 'no-store' })
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((body) => {
+              throw new Error(
+                `Proxy responded ${res.status} ${res.statusText} for ${url}` +
+                (body ? ` — ${body.slice(0, 200)}` : '') +
+                (res.status === 404
+                  ? ' (is /api/meshy-proxy.js actually deployed on this Vercel project?)'
+                  : '')
+              );
+            });
+          }
+          return res.arrayBuffer();
+        })
+        .then((buffer) => {
+          loader.parse(
+            buffer,
+            '',
+            (gltf) => {
+              // Remove any previously loaded Meshy model before adding the new one
+              if (window.meshyGroup) { scene.remove(window.meshyGroup); window.meshyGroup = null; }
 
-          // Normalise scale/position: fit the generated model into roughly
-          // the same footprint as a default BIM block, centred at origin.
-          const box    = new THREE.Box3().setFromObject(gltf.scene);
-          const size   = new THREE.Vector3(); box.getSize(size);
-          const center = new THREE.Vector3(); box.getCenter(center);
-          gltf.scene.position.sub(center); // center the mesh at local origin
-          const maxDim   = Math.max(size.x, size.y, size.z) || 1;
-          const baseScale = 8 / maxDim; // ~8-unit footprint, matches BIM scale
+              const group = new THREE.Group();
+              group.add(gltf.scene);
 
-          group.userData.baseScale = baseScale;
-          group.userData.baseRotY  = 0;
-          group.scale.set(baseScale, baseScale, baseScale);
+              // Normalise scale/position: fit the generated model into roughly
+              // the same footprint as a default BIM block, centred at origin.
+              const box    = new THREE.Box3().setFromObject(gltf.scene);
+              const size   = new THREE.Vector3(); box.getSize(size);
+              const center = new THREE.Vector3(); box.getCenter(center);
+              gltf.scene.position.sub(center); // center the mesh at local origin
+              const maxDim   = Math.max(size.x, size.y, size.z) || 1;
+              const baseScale = 8 / maxDim; // ~8-unit footprint, matches BIM scale
 
-          document.getElementById('welcome').style.display = 'none';
-          if (typeof OrbCanvas !== 'undefined') OrbCanvas.stop();
+              group.userData.baseScale = baseScale;
+              group.userData.baseRotY  = 0;
+              group.scale.set(baseScale, baseScale, baseScale);
 
-          // Reset gesture physics so the new model starts at rest, matching
-          // buildBIM()'s behaviour when a fresh model is loaded.
-          window._objRotY = 0; window._objRotX = 0; window._objScale = 1.0;
-          window._objOmegaY = 0; window._objOmegaX = 0; window._objDScale = 0;
-          window._objStopped = false;
+              document.getElementById('welcome').style.display = 'none';
+              if (typeof OrbCanvas !== 'undefined') OrbCanvas.stop();
 
-          window.meshyGroup = group;
-          scene.add(group);
+              // Reset gesture physics so the new model starts at rest, matching
+              // buildBIM()'s behaviour when a fresh model is loaded.
+              window._objRotY = 0; window._objRotX = 0; window._objScale = 1.0;
+              window._objOmegaY = 0; window._objOmegaX = 0; window._objDScale = 0;
+              window._objStopped = false;
 
-          setStatus(`Loaded (${meta.source}) — drag/gesture to rotate, pinch/scroll to zoom.`, 100);
-          addLog('ok', `[AI-Model] GLB loaded from ${meta.source} input — fitted to scale ${baseScale.toFixed(3)}`);
-          resolve(group);
-        },
-        undefined,
-        (err) => {
-          setStatus('Failed to load GLB into scene: ' + (err.message || err), 0, true);
-          addLog('err', '[AI-Model] GLTFLoader error: ' + (err.message || err));
+              window.meshyGroup = group;
+              scene.add(group);
+
+              setStatus(`Loaded (${meta.source}) — drag/gesture to rotate, pinch/scroll to zoom.`, 100);
+              addLog('ok', `[AI-Model] GLB loaded from ${meta.source} input — fitted to scale ${baseScale.toFixed(3)}`);
+              resolve(group);
+            },
+            (parseErr) => {
+              const msg = (parseErr && parseErr.message) || String(parseErr);
+              setStatus('Failed to parse GLB: ' + msg, 0, true);
+              addLog('err', '[AI-Model] GLTFLoader parse error: ' + msg);
+              resolve(null);
+            }
+          );
+        })
+        .catch((err) => {
+          const msg = (err && err.message) || String(err);
+          setStatus('Failed to load GLB into scene: ' + msg, 0, true);
+          addLog('err', '[AI-Model] GLB fetch error: ' + msg);
           resolve(null);
-        }
-      );
+        });
     });
   }
 
