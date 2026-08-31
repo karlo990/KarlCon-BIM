@@ -2697,7 +2697,7 @@ function animate(){
   broadcastObjTransform();
 
   // Hologram pulse / glitch
-  if(bimGroup && layers.holo){
+  if(bimGroup && bimGroup.visible && layers.holo){
     const t = now*0.001;
     const pulse = 0.78 + Math.sin(t * params.pulse * Math.PI) * 0.22;
     bimGroup.traverse(obj => {
@@ -2764,6 +2764,11 @@ function buildBIM(geo){
   if(bimGroup){ scene.remove(bimGroup); bimGroup=null; }
   document.getElementById('welcome').style.display='none';
   if (typeof OrbCanvas !== 'undefined') OrbCanvas.stop();
+
+  // A rebuild (SYNC → REGENERATE MODEL, or a live WS pipeline update) means
+  // the user wants the placeholder/parametric BIM back — clear any loaded
+  // Meshy model so the two don't overlap the way they did before this fix.
+  if (window.meshyGroup) { scene.remove(window.meshyGroup); window.meshyGroup = null; }
 
   bimGroup = new THREE.Group();
   const nF    = geo.floor_count  || params.floors;
@@ -3265,6 +3270,12 @@ const MeshyPipeline = (() => {
 
               window.meshyGroup = group;
               scene.add(group);
+
+              // Hide the default placeholder BIM block — otherwise it sits
+              // at the same origin/scale as the new model and either
+              // occludes it or z-fights with it, so the Meshy model never
+              // reads as "loaded" even though it's actually in the scene.
+              if (bimGroup) bimGroup.visible = false;
 
               setStatus(`Loaded (${meta.source}) — drag/gesture to rotate, pinch/scroll to zoom.`, 100);
               addLog('ok', `[AI-Model] GLB loaded from ${meta.source} input — fitted to scale ${baseScale.toFixed(3)}`);
