@@ -2471,6 +2471,11 @@ function initThree(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   renderer.setSize(W, H);
   renderer.setClearColor(0x000000, 0);
+  // sRGB output encoding — without this, glTF/GLB textures (authored in
+  // sRGB, as Meshy's are) render far too dark under three.js r128's default
+  // LinearEncoding. This was the main cause of AI-generated models looking
+  // almost black regardless of lighting.
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
   // Orbit controls via mouse — writes to window._g* globals (single source of truth)
   // animate() always reads these globals to position the camera, whether mouse or
@@ -2528,10 +2533,16 @@ function initThree(){
   window._objOmegaX = 0;    // angular velocity X (rad/frame)
   window._objDScale = 0;    // scale rate (units/frame)
   window._objStopped = false; // thumb_up stop flag
-  const ambient = new THREE.AmbientLight(0x0fd8ec, 0.3);
+  // Neutral white, brighter lighting — the previous cyan-tinted ambient
+  // (0x0fd8ec) at low intensity tinted every material and left AI-generated
+  // GLB models looking almost black. Neutral white + a fill light gives an
+  // even, undistorted view of whatever the model's own textures/colours are.
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambient);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.5);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.1);
   dir.position.set(10,20,10); scene.add(dir);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+  fill.position.set(-12,8,-10); scene.add(fill);
 
   // Karvision live-feed background plane — colour + monocular depth
   // displacement, sits behind the hologram (z=-30). Populated frame-by-frame
