@@ -593,11 +593,25 @@ body{
     setupSvChrome();
   }
 
+  // The #sv-pano div is built while .sv-stage still has .hidden (display:none),
+  // so the panorama's very first size read is 0×0 / stale. Nothing tells it to
+  // re-measure when the stage is later revealed or resized (hidden→full, or
+  // pip↔full, both of which change the container's box). Google Maps never
+  // auto-detects that — the fix is firing the 'resize' event ourselves once
+  // the new box has actually been laid out, so the photo fills the frame
+  // instead of rendering small/cropped at its stale cached size.
+  function resizePano(){
+    requestAnimationFrame(() => {
+      google.maps.event.trigger(state.svPano, 'resize');
+    });
+  }
+
   function openImmersive(lat, lng){
     groundTeleport(lat, lng); // 3D mesh flies in behind, in parallel
     $('sv-stage').classList.remove('hidden', 'pip');
     $('sv-pip-btn').textContent = '◱ Shrink to 3D corner';
     setStatus('Real Street View photo — shrink it to see the 3D mesh, or close to return to 3D only.');
+    resizePano(); // stage just went hidden → full-bleed: box changed instantly, no transition to wait on
   }
 
   function setupSvChrome(){
@@ -616,6 +630,12 @@ body{
         $('sv-stage').classList.remove('pip');
         $('sv-pip-btn').textContent = '◱ Shrink to 3D corner';
       }
+    });
+    // pip ↔ full-bleed is animated (width/height/inset transition, .5s) — wait
+    // for the box to actually finish changing size before re-measuring, or
+    // we'd resize the panorama mid-transition to the wrong dimensions.
+    $('sv-stage').addEventListener('transitionend', (e) => {
+      if(e.propertyName === 'width' || e.propertyName === 'height') resizePano();
     });
   }
 
