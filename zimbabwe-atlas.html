@@ -577,11 +577,27 @@ body{
     });
     state.map2d.setStreetView(state.svPano);
 
-    state.svPano.addListener('visible_changed', () => {
-      if(!state.svPano.getVisible()) return;
-      const pos = state.svPano.getPosition();
-      if(pos) openImmersive(pos.lat(), pos.lng());
-    });
+    // Pegman drop fires the panorama's 'visible_changed' and 'position_changed'
+    // in an unreliable order — sometimes visible flips true before the position
+    // has actually loaded, so a lone visible_changed listener with a `if(pos)`
+    // guard can bail out on a null position and never get another chance, since
+    // nothing was listening when position_changed arrived moments later. That's
+    // why some drops silently did nothing. Fix: listen for both events and
+    // re-check both conditions each time; debounce with a microtask so a drop
+    // that fires both events back-to-back only opens the stage once.
+    let svOpenQueued = false;
+    function maybeOpenImmersive(){
+      if(svOpenQueued) return;
+      svOpenQueued = true;
+      Promise.resolve().then(() => {
+        svOpenQueued = false;
+        if(!state.svPano.getVisible()) return;
+        const pos = state.svPano.getPosition();
+        if(pos) openImmersive(pos.lat(), pos.lng());
+      });
+    }
+    state.svPano.addListener('visible_changed', maybeOpenImmersive);
+    state.svPano.addListener('position_changed', maybeOpenImmersive);
 
     $('peg-coverage').addEventListener('click', () => {
       const showing = state.svCoverageLayer.getMap() === state.map2d;
