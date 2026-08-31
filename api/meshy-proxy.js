@@ -2,7 +2,7 @@
 //
 // Vercel Serverless Function — proxies downloads of Meshy-generated assets
 // (GLB/FBX/OBJ/etc.) so the browser never has to fetch assets.meshy.ai
-// directly. Meshy's asset CDN does not send Access-Control-Allow-Origin,
+// directly, since Meshy's asset CDN does not send Access-Control-Allow-Origin,
 // so browser-side fetch()/GLTFLoader.load() calls are blocked by CORS —
 // this is confirmed in Meshy's own docs (docs.meshy.ai/en/api/errors):
 // "Consider using a server-side proxy for such requests."
@@ -40,75 +40,97 @@ function isAllowedHost(hostname) {
   return hostname === ALLOWED_EXACT_HOST || hostname.endsWith(ALLOWED_HOST_SUFFIX);
 }
 
+// Meshy's CDN sits behind Varnish and occasionally answers transient
+// congestion (503 Backend.max_conn reached, 502, 504) rather than actually
+// failing the request. These are worth a short retry/backoff before we
+// give up and tell the user the model can't be loaded — otherwise a
+// perfectly good, already-generated model looks "broken" to the app for
+// what's really a few seconds of upstream contention.
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+const MAX_ATTEMPTS = 4;
+const BASE_DELAY_MS = 300; // 300, 600, 1200 ... capped below
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, attempt = 1) {
+  const upstream = await fetch(url, {
+    // Don't let a hung upstream connection tie up the function forever;
+    // Vercel already enforces its own maxDuration, but this keeps retries
+    // from stacking past that budget.
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (RETRYABLE_STATUSES.has(upstream.status) && attempt < MAX_ATTEMPTS) {
+    const delay = Math.min(BASE_DELAY_MS * 2 ** (attempt - 1), 4000);
+    await sleep(delay);
+    return fetchWithRetry(url, attempt + 1);
+  }
+
+  return { upstream, attempt };
+}
+
 export default async function handler(req, res) {
-  // Basic CORS for your own frontend (adjust origin if you serve from
-  // more than one domain). This is CORS *we* control, on *our* response —
-  // totally separate from the Meshy CORS issue this proxy works around.
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  const { url } = req.query;
 
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed — use GET' });
-    return;
-  }
-
-  const targetUrl = req.query.url;
-  if (!targetUrl || typeof targetUrl !== 'string') {
-    res.status(400).json({ error: 'Missing required ?url= query parameter' });
+  if (!url || typeof url !== 'string') {
+    res.status(400).json({ error: 'Missing required "url" query parameter.' });
     return;
   }
 
   let parsed;
   try {
-    parsed = new URL(targetUrl);
-  } catch (e) {
-    res.status(400).json({ error: 'Invalid url parameter' });
+    parsed = new URL(url);
+  } catch {
+    res.status(400).json({ error: 'Malformed "url" parameter.' });
     return;
   }
 
-  if (parsed.protocol !== 'https:' || !isAllowedHost(parsed.hostname)) {
-    res.status(400).json({ error: 'url must be an https://*.meshy.ai address' });
+  if (!isAllowedHost(parsed.hostname)) {
+    res.status(400).json({
+      error: `Refusing to proxy host "${parsed.hostname}" — only *.meshy.ai is allowed.`,
+    });
     return;
   }
 
   try {
-    // Server-to-server fetch — CORS does not apply here at all.
-    const upstream = await fetch(parsed.toString());
+    const { upstream, attempt } = await fetchWithRetry(parsed.toString());
 
     if (!upstream.ok) {
+      // Never forward the raw upstream body (which may be an HTML error
+      // page from Varnish/Meshy's CDN, not JSON/plain text) straight into
+      // the client's error message — cap and label it clearly instead so
+      // the frontend's setStatus()/addLog() shows something actionable.
+      const rawBody = await upstream.text().catch(() => '');
+      const isRetryable = RETRYABLE_STATUSES.has(upstream.status);
       res.status(upstream.status).json({
-        error: `Upstream fetch failed: HTTP ${upstream.status}`,
+        error: isRetryable
+          ? `Meshy's asset CDN is temporarily unavailable (HTTP ${upstream.status}) ` +
+            `after ${attempt} attempt(s). This is transient upstream congestion, not ` +
+            `a bug in this app — try again in a few seconds.`
+          : `Upstream returned HTTP ${upstream.status} ${upstream.statusText}.`,
+        upstream_status: upstream.status,
+        attempts: attempt,
+        upstream_body_snippet: rawBody.replace(/\s+/g, ' ').trim().slice(0, 300),
       });
       return;
     }
 
-    // Pass through the real content type/length so GLTFLoader (and the
-    // browser) treat this exactly like a normal binary download.
-    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
-    const contentLength = upstream.headers.get('content-length');
-
-    res.setHeader('Content-Type', contentType);
-    if (contentLength) res.setHeader('Content-Length', contentLength);
-    // Signed Meshy URLs are already time-limited; cache briefly to avoid
-    // re-proxying the same asset on every re-render within a session.
-    res.setHeader('Cache-Control', 'public, max-age=3600, immutable');
-
-    // Stream the body straight through without buffering the whole file
-    // in memory — important for GLBs that can be tens of MB.
-    const reader = upstream.body.getReader();
+    // Stream the successful response straight through.
     res.status(200);
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(Buffer.from(value));
-    }
-    res.end();
-  } catch (e) {
-    res.status(502).json({ error: 'Proxy fetch failed: ' + e.message });
+    const contentType = upstream.headers.get('content-type');
+    if (contentType) res.setHeader('Content-Type', contentType);
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.send(buffer);
+  } catch (err) {
+    const msg = (err && err.message) || String(err);
+    res.status(502).json({
+      error: `Failed to fetch asset from Meshy after retries: ${msg}`,
+    });
   }
 }
