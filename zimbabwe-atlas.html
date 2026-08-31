@@ -199,6 +199,50 @@ body{
 .cam-controls input[type=range]{flex:1;accent-color:var(--c);cursor:pointer;height:2px}
 .cam-controls .val{font-size:9.5px;color:var(--c2);width:30px;text-align:right}
 
+/* ═══ IMMERSIVE STREET VIEW STAGE ═══
+   Full-bleed real photograph on pegman drop, independent DOM node from
+   #map2d so it keeps rendering even after switchMode('3d') hides the flat
+   map. Two states: full-bleed (default) and .pip (shrunk to a corner
+   window so the 3D mesh underneath is visible for spatial context). */
+.sv-stage{
+  position:absolute;inset:0;z-index:8;background:#05060a;overflow:hidden;
+  border-radius:0;border:0 solid transparent;cursor:default;
+  box-shadow:0 0 0 rgba(0,0,0,0);
+  transition:inset .5s cubic-bezier(.22,.9,.32,1),width .5s cubic-bezier(.22,.9,.32,1),
+             height .5s cubic-bezier(.22,.9,.32,1),border-radius .4s ease,
+             border-color .25s ease,box-shadow .4s ease,top .5s cubic-bezier(.22,.9,.32,1),
+             right .5s cubic-bezier(.22,.9,.32,1),bottom .5s cubic-bezier(.22,.9,.32,1),
+             left .5s cubic-bezier(.22,.9,.32,1);
+}
+.sv-stage.hidden{display:none}
+.sv-pano{width:100%;height:100%}
+.sv-chrome{position:absolute;z-index:2;font-family:var(--fm)}
+.sv-badge{
+  top:14px;left:14px;pointer-events:none;
+  background:rgba(10,12,22,.74);border:1px solid rgba(0,232,152,.4);color:#00e898;
+  font-size:9.5px;letter-spacing:1.5px;padding:5px 11px 5px 9px;border-radius:var(--rpill);
+  backdrop-filter:blur(8px);display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.sv-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#00e898;box-shadow:0 0 8px #00e898;animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+.sv-bar{bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+.sv-btn{
+  font-family:var(--fm);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;
+  padding:8px 14px;border-radius:var(--rpill);cursor:pointer;white-space:nowrap;
+  background:rgba(10,12,22,.84);border:1px solid rgba(168,85,247,.42);color:var(--c2);
+  backdrop-filter:blur(8px);transition:all .2s;
+}
+.sv-btn:hover{background:rgba(168,85,247,.24);border-color:var(--c)}
+.sv-btn.ghost{border-color:rgba(240,68,96,.42);color:#f04460;padding:8px 12px}
+.sv-btn.ghost:hover{background:rgba(240,68,96,.16)}
+.sv-stage.pip{
+  inset:auto;top:14px;right:14px;width:260px;height:168px;
+  border-radius:var(--r3);border:1px solid rgba(168,85,247,.48);cursor:pointer;
+  box-shadow:0 10px 32px rgba(0,0,0,.5),0 0 26px rgba(168,85,247,.24);
+}
+.sv-stage.pip:hover{border-color:var(--c);box-shadow:0 12px 38px rgba(0,0,0,.55),0 0 34px rgba(168,85,247,.36)}
+.sv-stage.pip .sv-badge{top:8px;left:8px;font-size:7.5px;padding:3px 8px}
+.sv-stage.pip .sv-bar{bottom:8px;transform:translateX(-50%) scale(.8)}
+
 /* ═══ ORBIT-RING LOADER — "2035" boot sequence over the map ═══ */
 .lock-overlay{
   position:absolute;inset:0;background:radial-gradient(circle at center,#0d1024 0%,#05060a 75%);
@@ -293,6 +337,14 @@ body{
     </div>
     <gmp-map-3d id="map3d" class="on" mode="hybrid" center="-19.0154,29.1549,300" range="700000" tilt="55" heading="0" default-ui-hidden></gmp-map-3d>
     <div id="map2d"></div>
+    <div class="sv-stage hidden" id="sv-stage">
+      <div class="sv-pano" id="sv-pano"></div>
+      <div class="sv-chrome sv-badge">REAL STREET VIEW PHOTO</div>
+      <div class="sv-chrome sv-bar">
+        <button type="button" class="sv-btn" id="sv-pip-btn">◱ Shrink to 3D corner</button>
+        <button type="button" class="sv-btn ghost" id="sv-close-btn" title="Close photo, stay in 3D">✕</button>
+      </div>
+    </div>
     <div class="hud" id="hud"><b>Zimbabwe</b><br>Pick a site from the list, or search above.</div>
     <div class="cam-controls" id="cam-controls" style="display:none">
       <div class="field"><label>tilt</label><input type="range" id="tilt-slider" min="0" max="85" value="55"/><span class="val" id="tilt-val">55</span></div>
@@ -336,8 +388,9 @@ body{
       const { Map3DElement } = await google.maps.importLibrary('maps3d');
       const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
       await google.maps.importLibrary('geometry');
-      const { StreetViewCoverageLayer } = await google.maps.importLibrary('streetView');
+      const { StreetViewCoverageLayer, StreetViewPanorama } = await google.maps.importLibrary('streetView');
       state.svCoverageLayer = new StreetViewCoverageLayer();
+      state.StreetViewPanorama = StreetViewPanorama; // stashed for setupPegman() — see below
 
       state.map3d = $('map3d');
       buildPlaceList();
@@ -485,22 +538,49 @@ body{
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // PEGMAN → 3D TELEPORT
-  // The flat map's native Pegman control already knows exactly where
-  // imagery exists (it draws the blue streets as you drag it) — we don't
-  // need to reinvent that. We just intercept the drop: grab the pegman's
-  // panorama position, immediately hide the flat photo panorama, and fly
-  // the photorealistic 3D camera down to a tight, ground-level shot at
-  // that exact point instead. "Show imagery coverage" toggles the same
-  // blue coverage layer on the map full-time, without needing to drag.
+  // PEGMAN → IMMERSIVE GROUND DROP
+  // Earlier version: pegman told us a valid coordinate existed, then we
+  // threw the actual photo away (`panorama.setVisible(false)`) and only
+  // ever rendered the Photorealistic 3D TILES MESH close to the ground.
+  // That mesh is aerial/satellite photogrammetry — a 3D reconstruction,
+  // not a photograph — so pushed in tight it reads as slightly smeared,
+  // not "real". The real ground-level photograph *is* the Street View
+  // panorama the pegman already found; we were just discarding it.
+  //
+  // Fix: bind our own StreetViewPanorama to a dedicated #sv-pano div
+  // (kept outside #map2d so it survives switchMode('3d') hiding the flat
+  // map), then hand it to the 2D map via `map.setStreetView()`. Per the
+  // Maps JS API reference, a panorama "can be stand-alone within a
+  // separate DIV or bound to a Map", and assigning a custom instance
+  // to `map.streetView` overrides the map's built-in inline pano — so
+  // dragging pegman on the flat map still works exactly as before, it
+  // just now renders into our overlay instead of being discarded.
+  // (docs: developers.google.com/maps/documentation/javascript/streetview)
+  //
+  // On drop we show the real photo full-bleed immediately (the genuine
+  // "standing there" shot, fully interactive — drag to look around, walk
+  // the blue links) AND fly the 3D camera to the same coordinate in
+  // parallel underneath it, so the mesh is already in place the instant
+  // the user shrinks the photo to a corner for spatial context. Both
+  // views stay live and in sync; nothing is ever thrown away.
   // ═══════════════════════════════════════════════════════════════════
   function setupPegman(){
-    const panorama = state.map2d.getStreetView();
-    panorama.addListener('visible_changed', () => {
-      if(!panorama.getVisible()) return;
-      const pos = panorama.getPosition();
-      panorama.setVisible(false); // we use it as a coverage-aware picker only
-      if(pos) groundTeleport(pos.lat(), pos.lng());
+    state.svPano = new state.StreetViewPanorama($('sv-pano'), {
+      visible: false,
+      addressControl: false,
+      fullscreenControl: false,
+      motionTracking: false,
+      linksControl: true,
+      panControl: true,
+      zoomControl: true,
+      clickToGo: true
+    });
+    state.map2d.setStreetView(state.svPano);
+
+    state.svPano.addListener('visible_changed', () => {
+      if(!state.svPano.getVisible()) return;
+      const pos = state.svPano.getPosition();
+      if(pos) openImmersive(pos.lat(), pos.lng());
     });
 
     $('peg-coverage').addEventListener('click', () => {
@@ -508,6 +588,34 @@ body{
       state.svCoverageLayer.setMap(showing ? null : state.map2d);
       $('peg-coverage').classList.toggle('active', !showing);
       $('peg-coverage').textContent = showing ? '◐ Show imagery coverage' : '◑ Hide imagery coverage';
+    });
+
+    setupSvChrome();
+  }
+
+  function openImmersive(lat, lng){
+    groundTeleport(lat, lng); // 3D mesh flies in behind, in parallel
+    $('sv-stage').classList.remove('hidden', 'pip');
+    $('sv-pip-btn').textContent = '◱ Shrink to 3D corner';
+    setStatus('Real Street View photo — shrink it to see the 3D mesh, or close to return to 3D only.');
+  }
+
+  function setupSvChrome(){
+    $('sv-pip-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isPip = $('sv-stage').classList.toggle('pip');
+      $('sv-pip-btn').textContent = isPip ? '⛶ Back to full photo' : '◱ Shrink to 3D corner';
+    });
+    $('sv-close-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('sv-stage').classList.add('hidden');
+      state.svPano.setVisible(false);
+    });
+    $('sv-stage').addEventListener('click', () => {
+      if($('sv-stage').classList.contains('pip')){
+        $('sv-stage').classList.remove('pip');
+        $('sv-pip-btn').textContent = '◱ Shrink to 3D corner';
+      }
     });
   }
 
