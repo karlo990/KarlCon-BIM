@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KarlCON · Atlas — Site Scout · GE-v16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23080910' stroke='%23a855f7' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23a855f7' opacity='.8'/%3E%3C/svg%3E"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════════
+   KARLCON DESIGN SYSTEM — matched 1:1 to the BIM Hologram app
+   so Atlas ↔ BIM Core feels like a single product, not two.
+   Primary: #a855f7 (purple)  |  BG: #ffffff  |  Font: JetBrains Mono
+══════════════════════════════════════════════════ */
+:root{
+  --c:    #a855f7;
+  --c2:   #c9a0ff;
+  --blue: #5a8cff;
+  --bg:   #ffffff;
+  --bg2:  #f4f2fa;
+  --bdr:  rgba(168,85,247,.10);
+  --bdr2: rgba(168,85,247,.22);
+  --r1:10px; --r2:14px; --r3:20px; --r4:28px; --rpill:100px;
+  --ws-on:#00e898; --ws-off:#f04460;
+  --fm:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--c);
+  font-family:var(--fm);overflow:hidden;
+  height:100vh;width:100vw;position:relative;
+  display:flex;flex-direction:column;
+}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(168,85,247,.14);border-radius:100px}
+
+/* ═══ HEADER — exact match to BIM Core ═══ */
+#header{
+  flex:0 0 auto;height:48px;
+  background:linear-gradient(135deg,rgba(15,35,90,0.96) 0%,rgba(10,25,70,0.98) 100%);
+  border-bottom:1px solid rgba(80,140,255,0.18);
+  display:flex;align-items:center;gap:16px;
+  padding:0 20px;z-index:200;
+  box-shadow:0 4px 40px rgba(0,20,80,0.5),0 1px 0 rgba(255,255,255,0.03),inset 0 1px 0 rgba(80,140,255,0.08);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+#logo-wordmark{
+  font-family:'Space Grotesk','JetBrains Mono',monospace;
+  font-size:16px;font-weight:400;letter-spacing:5px;text-transform:uppercase;color:#a855f7;
+  text-shadow:0 0 18px rgba(168,85,247,.4),0 0 36px rgba(0,160,200,.14);
+  white-space:nowrap;flex-shrink:0;
+}
+#logo-wordmark .lw-mark{font-family:var(--fm);font-weight:400;opacity:.55;letter-spacing:0;margin-right:7px;font-size:13px}
+#ticker-wrap{flex:1;min-width:0;overflow:hidden;height:100%;display:flex;align-items:center}
+.ticker-inner{font-family:var(--fm);font-size:8px;letter-spacing:1px;color:rgba(168,85,247,0.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+
+#bim-nav-btn{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+  padding:5px 14px 5px 5px;
+  background:rgba(80,140,255,.08);
+  border:1px solid rgba(120,160,255,.32);
+  border-radius:var(--rpill);cursor:pointer;transition:all .25s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+#bim-nav-btn:hover{border-color:rgba(168,85,247,.65);background:rgba(168,85,247,.12);box-shadow:0 0 18px rgba(168,85,247,.22),inset 0 1px 0 rgba(255,255,255,.06)}
+#bim-nav-btn:active{transform:scale(.97)}
+.bim-nav-icon{
+  width:20px;height:20px;border-radius:6px;flex-shrink:0;
+  background:linear-gradient(145deg,#c9a0ff,#5a3fb0 60%,#1e2a6e);
+  box-shadow:0 0 9px rgba(120,150,255,.55),inset -2px -2px 4px rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#fff;
+}
+#bim-nav-label{font-family:var(--fm);font-size:9px;letter-spacing:1.6px;color:rgba(160,180,255,.85);text-transform:uppercase;white-space:nowrap}
+#bim-nav-btn:hover #bim-nav-label{color:var(--c)}
+
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:var(--ws-on);box-shadow:0 0 10px var(--ws-on),0 0 20px rgba(0,232,152,.28);animation:pulse 2.5s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ═══ STATUS STRIP ═══ */
+#status-line{
+  flex:0 0 auto;font-family:var(--fm);font-size:10.5px;letter-spacing:.5px;
+  color:rgba(168,85,247,.55);padding:7px 20px;
+  border-bottom:1px solid var(--bdr);background:var(--bg2);
+}
+#status-line.error{color:#f04460}
+#status-line .badge{
+  display:inline-block;margin-left:10px;padding:2px 9px;border-radius:var(--rpill);
+  background:rgba(90,140,255,.1);border:1px solid rgba(90,140,255,.3);color:var(--blue);
+  font-size:9px;letter-spacing:1px;
+}
+
+/* ═══ LAYOUT ═══ */
+#layout{flex:1;display:grid;grid-template-columns:272px 1fr;min-height:0}
+@media (max-width:900px){#layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+
+.side-panel{
+  background:linear-gradient(170deg,rgba(255,255,255,0.97) 0%,rgba(248,246,252,0.98) 100%);
+  border-right:1px solid rgba(168,85,247,0.08);
+  padding:10px 9px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:9px;
+}
+
+.panel-block{
+  background:linear-gradient(145deg,rgba(168,85,247,.028) 0%,rgba(90,140,255,.02) 100%);
+  border:1px solid rgba(168,85,247,.10);
+  border-radius:var(--r3);padding:12px 13px;position:relative;transition:all .25s;
+  box-shadow:0 2px 16px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.panel-block::before{
+  content:'';position:absolute;top:0;left:20px;right:20px;height:1px;border-radius:100px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.28),transparent);
+}
+.panel-block:hover{border-color:rgba(168,85,247,0.4);box-shadow:0 4px 24px rgba(0,0,0,.08),0 0 20px rgba(168,85,247,.06)}
+.panel-block-title{
+  font-family:var(--fm);font-size:9.5px;font-weight:700;letter-spacing:2px;
+  color:rgba(168,85,247,0.65);text-transform:uppercase;
+  margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid rgba(168,85,247,.1);
+  display:flex;align-items:center;gap:6px;
+}
+.pbt-icon{font-size:11px}
+
+.group-label{font-size:9.5px;letter-spacing:1.4px;color:rgba(168,85,247,.4);margin:12px 0 7px;text-transform:uppercase;font-family:var(--fm)}
+.group-label:first-child{margin-top:0}
+
+.place-item{
+  border:1px solid var(--bdr);border-left:2px solid rgba(90,140,255,.4);
+  padding:8px 10px;border-radius:var(--r1);cursor:pointer;margin-bottom:6px;
+  background:rgba(255,255,255,.6);transition:all .18s;
+}
+.place-item:hover{border-left-color:var(--c);background:rgba(168,85,247,.04)}
+.place-item.active{border-left-color:var(--c);background:rgba(168,85,247,.08);box-shadow:0 0 12px rgba(168,85,247,.1)}
+.place-item .pname{font-size:12px;font-weight:600;color:#2a1a4a;letter-spacing:.2px}
+.place-item .pmeta{font-size:9.5px;color:rgba(90,70,140,.6);margin-top:3px;line-height:1.4}
+
+.custom-note{font-size:10px;color:rgba(168,85,247,.4);line-height:1.6;margin-top:8px;padding:0 2px}
+
+/* ── buttons — exact BIM Core styling ── */
+.btn{
+  width:100%;padding:8px;margin-bottom:6px;
+  background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.35);
+  border-radius:var(--rpill);color:var(--c);
+  font-family:var(--fm);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
+}
+.btn:hover{background:rgba(168,85,247,.16);border-color:var(--c);box-shadow:0 0 16px rgba(168,85,247,.18)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.primary{background:linear-gradient(135deg,rgba(168,85,247,.9),rgba(90,140,255,.85));border-color:transparent;color:#fff;font-weight:600}
+.btn.primary:hover{box-shadow:0 0 20px rgba(168,85,247,.4)}
+.btn.send{background:linear-gradient(135deg,rgba(0,210,160,.92),rgba(90,140,255,.88));border-color:transparent;color:#fff;font-weight:600}
+.btn.send:hover{box-shadow:0 0 20px rgba(0,210,160,.35)}
+.btn.small{padding:6px;font-size:9px}
+.btn.ghost{background:transparent;border-color:var(--bdr2)}
+
+#mode-row{display:flex;gap:6px}
+#mode-row .btn{margin-bottom:0}
+.btn.active{background:rgba(168,85,247,.16);border-color:var(--c);box-shadow:0 0 12px rgba(168,85,247,.14)}
+
+.search-box{margin-bottom:2px}
+#search-container{width:100%}
+#search-container gmp-place-autocomplete{width:100%;--gmp-mat-color-surface:#fff;font-family:var(--fm)}
+
+/* ── capture panel ── */
+#capture-thumb-wrap{
+  border:1px dashed rgba(168,85,247,.28);border-radius:var(--r2);
+  padding:8px;text-align:center;margin-bottom:8px;background:rgba(168,85,247,.02);
+  min-height:64px;display:flex;align-items:center;justify-content:center;
+}
+#capture-thumb{max-width:100%;border-radius:var(--r1);display:none}
+#capture-placeholder{font-size:9px;color:rgba(168,85,247,.4);letter-spacing:.4px;line-height:1.6}
+#capture-meta{font-size:9px;color:rgba(168,85,247,.5);letter-spacing:.3px;margin-bottom:8px;line-height:1.7}
+
+/* ═══ MAP VIEWPORT ═══ */
+.map-wrap{position:relative;min-height:0;background:#05060a}
+#map3d,#map2d{width:100%;height:100%;display:none}
+#map3d.on,#map2d.on{display:block}
+
+.hud{
+  position:absolute;left:14px;bottom:14px;
+  background:rgba(10,12,22,.82);border:1px solid rgba(168,85,247,.22);
+  padding:10px 13px;border-radius:var(--r2);
+  font-size:11px;line-height:1.7;color:rgba(220,210,255,.75);
+  pointer-events:none;max-width:280px;backdrop-filter:blur(8px);
+}
+.hud b{color:#fff;font-family:var(--fm);font-size:12.5px;letter-spacing:.3px}
+
+.cam-controls{
+  position:absolute;right:14px;bottom:14px;
+  background:rgba(10,12,22,.82);border:1px solid rgba(168,85,247,.22);
+  padding:10px 13px;border-radius:var(--r2);
+  display:flex;flex-direction:column;gap:8px;min-width:170px;backdrop-filter:blur(8px);
+}
+.cam-controls .field{display:flex;align-items:center;gap:8px}
+.cam-controls .field label{font-size:9px;color:rgba(220,210,255,.5);width:34px;letter-spacing:.5px}
+.cam-controls input[type=range]{flex:1;accent-color:var(--c);cursor:pointer;height:2px}
+.cam-controls .val{font-size:9.5px;color:var(--c2);width:30px;text-align:right}
+
+/* ═══ ORBIT-RING LOADER — "2035" boot sequence over the map ═══ */
+.lock-overlay{
+  position:absolute;inset:0;background:radial-gradient(circle at center,#0d1024 0%,#05060a 75%);
+  display:flex;align-items:center;justify-content:center;z-index:6;
+  flex-direction:column;gap:18px;
+}
+.orbit-globe{position:relative;width:96px;height:96px}
+.orbit-globe .core{
+  position:absolute;inset:22px;border-radius:50%;
+  background:radial-gradient(circle at 32% 26%,#e9dbff 0%,#a855f7 34%,#5a3fb0 62%,#1e2a6e 100%);
+  box-shadow:0 0 30px rgba(168,85,247,.55);
+}
+.orbit-globe .ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:1px solid rgba(168,85,247,.35);
+}
+.orbit-globe .ring.r1{animation:orbit-spin 3s linear infinite}
+.orbit-globe .ring.r2{inset:10px;border-color:rgba(90,140,255,.35);animation:orbit-spin 2.2s linear infinite reverse}
+.orbit-globe .ring::before{
+  content:'';position:absolute;top:-2px;left:50%;width:5px;height:5px;margin-left:-2.5px;
+  border-radius:50%;background:var(--c2);box-shadow:0 0 8px var(--c2);
+}
+@keyframes orbit-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.lock-overlay p{font-family:var(--fm);font-size:10.5px;letter-spacing:1.5px;color:rgba(200,190,255,.6);text-transform:uppercase}
+
+/* ── mobile ── */
+@media (max-width:900px){
+  .side-panel{max-height:38vh}
+  #bim-nav-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<header id="header">
+  <span id="logo-wordmark"><span class="lw-mark">◈</span>ATLAS</span>
+  <div id="ticker-wrap">
+    <div class="ticker-inner">◈ SITE SCOUT · GOOGLE MAPS 3D PHOTOREALISTIC TILES · ORBIT CAPTURE · IMG→BIM HANDOFF · GE-v16 COMPATIBLE</div>
+  </div>
+  <button type="button" id="bim-nav-btn" onclick="goToBIM()" title="Back to the BIM Hologram Core">
+    <span class="bim-nav-icon">⬡</span>
+    <span id="bim-nav-label">BIM Core</span>
+  </button>
+  <div class="hdr-dot"></div>
+</header>
+
+<div id="status-line">Loading atlas…</div>
+
+<div id="layout">
+  <aside class="side-panel">
+
+    <div class="panel-block">
+      <div class="panel-block-title"><span class="pbt-icon">◈</span> SEARCH</div>
+      <div class="search-box" id="search-container"></div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-block-title"><span class="pbt-icon">◎</span> VIEW MODE</div>
+      <div id="mode-row">
+        <button id="mode-3d" class="btn small active">Bird's eye</button>
+        <button id="mode-2d" class="btn small">Flat map</button>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-block-title"><span class="pbt-icon">◉</span> SITES</div>
+      <div id="place-list"></div>
+      <div class="custom-note">Search above to fly anywhere else — any address, property, or landmark.</div>
+    </div>
+
+    <div class="panel-block" id="pb-capture">
+      <div class="panel-block-title"><span class="pbt-icon">◆</span> SITE CAPTURE</div>
+      <div id="capture-meta">Fly to a site, then capture a top-down reference image for the AI model pipeline.</div>
+      <div id="capture-thumb-wrap">
+        <img id="capture-thumb" alt=""/>
+        <div id="capture-placeholder">No image captured yet</div>
+      </div>
+      <button type="button" class="btn primary" id="capture-btn" onclick="captureSiteImage()" disabled>◈ Capture Site Image</button>
+      <button type="button" class="btn send" id="send-btn" onclick="sendToBIMCore()" disabled>⬡ Send to BIM Core →</button>
+    </div>
+
+  </aside>
+
+  <section class="map-wrap">
+    <div class="lock-overlay" id="lock-overlay">
+      <div class="orbit-globe"><div class="ring r1"></div><div class="ring r2"></div><div class="core"></div></div>
+      <p>Bringing the atlas online</p>
+    </div>
+    <gmp-map-3d id="map3d" class="on" mode="hybrid" center="-19.0154,29.1549,300" range="700000" tilt="55" heading="0" default-ui-hidden></gmp-map-3d>
+    <div id="map2d"></div>
+    <div class="hud" id="hud"><b>Zimbabwe</b><br>Pick a site from the list, or search above.</div>
+    <div class="cam-controls" id="cam-controls" style="display:none">
+      <div class="field"><label>tilt</label><input type="range" id="tilt-slider" min="0" max="85" value="55"/><span class="val" id="tilt-val">55</span></div>
+      <div class="field"><label>range</label><input type="range" id="range-slider" min="300" max="20000" value="3000"/><span class="val" id="range-val">3.0k</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const API_KEY = 'AIzaSyBKv5Yq0e905n9v-3dHJMVbt32TeAac0aE';
+
+  const PLACES = [
+    { group: 'Cities & business hubs', name: 'Harare', desc: 'Capital — administrative & commercial centre', lat: -17.8292, lng: 31.0522, range: 6000, tilt: 55 },
+    { group: 'Cities & business hubs', name: 'Bulawayo', desc: 'Second city — industrial & rail hub, Matabeleland', lat: -20.1500, lng: 28.5833, range: 6000, tilt: 55 },
+    { group: 'Cities & business hubs', name: 'Masvingo', desc: 'Gateway to Great Zimbabwe, Masvingo province', lat: -20.0637, lng: 30.8277, range: 5000, tilt: 55 },
+    { group: 'Cities & business hubs', name: 'Cape Town, SA', desc: 'KarlCon Elite Retreats — Cape Town operations', lat: -33.9249, lng: 18.4241, range: 7000, tilt: 55 },
+    { group: 'Natural wonders & sites', name: 'Victoria Falls', desc: 'Mosi-oa-Tunya, on the Zambezi', lat: -17.9243, lng: 25.8572, range: 2200, tilt: 60 },
+    { group: 'Natural wonders & sites', name: 'Great Zimbabwe Ruins', desc: 'Great Enclosure & Hill Complex, 11th–15th c.', lat: -20.2836, lng: 30.9337, range: 1200, tilt: 62 },
+    { group: 'Natural wonders & sites', name: 'Hwange National Park', desc: 'Largest game reserve in Zimbabwe', lat: -18.6280, lng: 26.9720, range: 12000, tilt: 55 },
+    { group: 'Natural wonders & sites', name: 'Lake Kariba', desc: "World's largest reservoir by volume", lat: -16.9167, lng: 28.8000, range: 15000, tilt: 55 },
+    { group: 'Natural wonders & sites', name: 'Matobo Hills', desc: 'Balancing granite kopjes, San rock art', lat: -20.5333, lng: 28.4833, range: 8000, tilt: 58 },
+    { group: 'Natural wonders & sites', name: 'Chimanimani', desc: 'Eastern Highlands mountain range', lat: -19.8000, lng: 32.8667, range: 8000, tilt: 58 },
+    { group: 'Natural wonders & sites', name: 'Chinhoyi Caves', desc: 'Sleeping Pool — cobalt-blue sinkhole', lat: -17.3492, lng: 30.1247, range: 900, tilt: 62 }
+  ];
+
+  const state = { map3d: null, map2d: null, mode: '3d', active: null, autocomplete: null };
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(msg, isErr){
+    const el = $('status-line');
+    el.textContent = msg;
+    el.classList.toggle('error', !!isErr);
+    if(new URLSearchParams(location.search).get('from') === 'bim'){
+      el.insertAdjacentHTML('beforeend', '<span class="badge">◈ Linked from BIM Core</span>');
+    }
+  }
+
+  window.initApp = async function(){
+    try{
+      const { Map3DElement } = await google.maps.importLibrary('maps3d');
+      const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
+      await google.maps.importLibrary('geometry');
+
+      state.map3d = $('map3d');
+      buildPlaceList();
+      placeMarkers();
+      setupSearch(PlaceAutocompleteElement);
+      setupModeToggle();
+      setupCamControls();
+
+      state.map3d.addEventListener('gmp-error', () => setStatus('3D tiles failed to load for this view — switch to Flat map.', true));
+      state.map3d.addEventListener('gmp-steadychange', (e) => { if(e.isSteady) $('lock-overlay').style.display = 'none'; });
+      setTimeout(() => { $('lock-overlay').style.display = 'none'; }, 3500);
+
+      setStatus('Atlas ready. Pick a site, or search any address / landmark.');
+    } catch(err){
+      console.error(err);
+      setStatus('Could not initialise the map — check the API key & enabled APIs in Cloud Console.', true);
+    }
+  };
+
+  function buildPlaceList(){
+    const list = $('place-list');
+    let currentGroup = null;
+    PLACES.forEach((p) => {
+      if(p.group !== currentGroup){
+        currentGroup = p.group;
+        const g = document.createElement('div');
+        g.className = 'group-label';
+        g.textContent = currentGroup;
+        list.appendChild(g);
+      }
+      const item = document.createElement('div');
+      item.className = 'place-item';
+      item.dataset.name = p.name;
+      item.innerHTML = `<div class="pname">${p.name}</div><div class="pmeta">${p.desc}</div>`;
+      item.addEventListener('click', () => flyTo(p, item));
+      list.appendChild(item);
+    });
+  }
+
+  function placeMarkers(){
+    PLACES.forEach((p) => {
+      try{
+        const el = document.createElement('gmp-marker-3d-interactive');
+        el.setAttribute('position', `${p.lat},${p.lng},0`);
+        el.setAttribute('title', p.name);
+        el.setAttribute('altitude-mode', 'clamp-to-ground');
+        el.addEventListener('gmp-click', () => {
+          const item = document.querySelector(`.place-item[data-name="${CSS.escape(p.name)}"]`);
+          flyTo(p, item);
+        });
+        state.map3d.appendChild(el);
+      } catch(e){ /* marker element unsupported in this channel — map still works */ }
+    });
+  }
+
+  function flyTo(p, itemEl){
+    document.querySelectorAll('.place-item').forEach((el) => el.classList.remove('active'));
+    if(itemEl) itemEl.classList.add('active');
+    state.active = p;
+
+    if(state.mode === '3d'){
+      state.map3d.flyCameraTo({
+        endCamera: { center: { lat: p.lat, lng: p.lng, altitude: 0 }, tilt: p.tilt || 55, range: p.range || 4000, heading: 0 },
+        durationMillis: 2200
+      });
+      $('tilt-slider').value = p.tilt || 55;
+      $('tilt-val').textContent = p.tilt || 55;
+      $('range-slider').value = Math.min(p.range || 4000, 20000);
+      $('range-val').textContent = fmtRange(p.range || 4000);
+    } else if(state.map2d){
+      state.map2d.panTo({ lat: p.lat, lng: p.lng });
+      state.map2d.setZoom(rangeToZoom(p.range || 4000));
+    }
+    $('hud').innerHTML = `<b>${p.name}</b><br>${p.desc}<br><span style="opacity:.6">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</span>`;
+    $('capture-btn').disabled = false;
+    setStatus(`Now viewing ${p.name}.`);
+  }
+
+  function fmtRange(r){ return r >= 1000 ? (r/1000).toFixed(1) + 'k' : String(r); }
+  function rangeToZoom(r){ if(r > 10000) return 11; if(r > 5000) return 13; if(r > 2000) return 14; if(r > 1000) return 15; return 18; }
+
+  function setupSearch(PlaceAutocompleteElement){
+    const el = new PlaceAutocompleteElement({ locationBias: { lat: -19.0154, lng: 29.1549, radius: 900000 } });
+    el.id = 'place-search';
+    el.placeholder = 'Search any place — property, town, landmark…';
+    $('search-container').appendChild(el);
+
+    el.addEventListener('gmp-select', async (evt) => {
+      const place = evt.placePrediction.toPlace();
+      await place.fetchFields({ fields: ['location', 'displayName', 'formattedAddress'] });
+      if(!place.location){ setStatus('That result has no coordinates — try another.', true); return; }
+      const custom = {
+        name: place.displayName || 'Searched place',
+        desc: place.formattedAddress || '',
+        lat: place.location.lat(),
+        lng: place.location.lng(),
+        range: 1200,
+        tilt: 60
+      };
+      flyTo(custom, null);
+    });
+  }
+
+  function setupModeToggle(){
+    $('mode-3d').addEventListener('click', () => switchMode('3d'));
+    $('mode-2d').addEventListener('click', () => switchMode('2d'));
+  }
+
+  function switchMode(mode){
+    if(mode === state.mode) return;
+    state.mode = mode;
+    $('mode-3d').classList.toggle('active', mode === '3d');
+    $('mode-2d').classList.toggle('active', mode === '2d');
+    $('map3d').classList.toggle('on', mode === '3d');
+    $('map2d').classList.toggle('on', mode === '2d');
+    $('cam-controls').style.display = mode === '3d' ? 'flex' : 'none';
+
+    if(mode === '2d' && !state.map2d){
+      state.map2d = new google.maps.Map($('map2d'), {
+        center: { lat: -19.0154, lng: 29.1549 },
+        zoom: 6,
+        mapTypeId: 'hybrid',
+        disableDefaultUI: false,
+        styles: MAP_STYLE_2D
+      });
+      PLACES.forEach((p) => {
+        const marker = new google.maps.Marker({
+          position: { lat: p.lat, lng: p.lng },
+          map: state.map2d,
+          title: p.name,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#a855f7', fillOpacity: 1, strokeColor: '#1e1b3a', strokeWeight: 1 }
+        });
+        marker.addListener('click', () => {
+          const item = document.querySelector(`.place-item[data-name="${CSS.escape(p.name)}"]`);
+          flyTo(p, item);
+        });
+      });
+    }
+    setStatus(mode === '3d' ? "Bird's-eye 3D mode." : 'Flat map mode.');
+  }
+
+  function setupCamControls(){
+    $('tilt-slider').addEventListener('input', (e) => {
+      $('tilt-val').textContent = e.target.value;
+      if(state.map3d) state.map3d.tilt = Number(e.target.value);
+    });
+    $('range-slider').addEventListener('input', (e) => {
+      $('range-val').textContent = fmtRange(Number(e.target.value));
+      if(state.map3d) state.map3d.range = Number(e.target.value);
+    });
+  }
+
+  const MAP_STYLE_2D = [
+    { elementType: 'labels.text.fill', stylers: [{ color: '#f4f2fa' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#0d0f0b' }] },
+    { featureType: 'administrative.country', elementType: 'geometry.stroke', stylers: [{ color: '#a855f7' }] }
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SITE CAPTURE — grabs a clean top-down reference image of the active
+  // site via the Static Maps API (satellite). This avoids trying to
+  // screenshot the live WebGL 3D tiles canvas, which browsers block
+  // cross-origin, and gives a consistent, well-lit image every time —
+  // exactly the kind of input the BIM Core's Image-to-3D pipeline wants.
+  // ═══════════════════════════════════════════════════════════════════
+  let _capturedDataUrl = null;
+
+  window.captureSiteImage = async function(){
+    const p = state.active;
+    if(!p) return;
+    const btn = $('capture-btn');
+    btn.disabled = true;
+    setStatus(`Capturing reference image for ${p.name}…`);
+    try{
+      const zoom = rangeToZoom(p.range || 2000);
+      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${p.lat},${p.lng}` +
+                  `&zoom=${zoom}&size=640x640&scale=2&maptype=satellite&key=${API_KEY}`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('Static Maps request failed (' + res.status + ')');
+      const blob = await res.blob();
+      _capturedDataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      });
+      $('capture-thumb').src = _capturedDataUrl;
+      $('capture-thumb').style.display = 'block';
+      $('capture-placeholder').style.display = 'none';
+      $('send-btn').disabled = false;
+      setStatus(`Image captured — ${p.name}. Ready to send to BIM Core.`);
+    } catch(e){
+      setStatus('Capture failed: ' + e.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // ── Hand off to the BIM Core ──────────────────────────────────────────
+  // Same-origin localStorage bridge (both apps live in the same Vercel
+  // deployment): write the captured image + site name, then navigate
+  // back — the BIM Core's DOMContentLoaded receiver picks it up, drops
+  // it straight into the Image Input tab, and starts generation.
+  window.sendToBIMCore = function(){
+    if(!_capturedDataUrl || !state.active) return;
+    try{
+      localStorage.setItem('karlcon_atlas_handoff', JSON.stringify({
+        dataUrl: _capturedDataUrl,
+        place: state.active.name,
+        ts: Date.now()
+      }));
+    } catch(e){
+      setStatus('Could not stage the handoff (storage unavailable): ' + e.message, true);
+      return;
+    }
+    setStatus(`Sending ${state.active.name} to BIM Core…`);
+    goToBIM();
+  };
+
+  window.goToBIM = function(){
+    location.href = location.origin + '/karlcon_bim_hologram_v8_gesturecast__4_.html';
+  };
+})();
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBKv5Yq0e905n9v-3dHJMVbt32TeAac0aE&v=weekly&libraries=places,geometry&loading=async&callback=initApp"></script>
+</body>
+</html>
