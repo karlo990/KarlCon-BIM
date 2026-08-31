@@ -17,6 +17,15 @@
   window.PIPELINE_BASE = dockerUrl + '/pipeline';
   window.PIPELINE_WS   = dockerUrl.replace(/^http/, 'ws') + '/ws-pipe';
   console.info('[KarlCON] Docker =', dockerUrl, '| REST =', window.PIPELINE_BASE);
+
+  // Hologram viewer URL — where "Visualise in Hologram Viewer" / the
+  // Stage 4 → Meshy AI handoff opens. Defaults to a sibling file on the
+  // same deployment; override with ?hologram=<url> if the hologram app is
+  // deployed under a different filename/path (check what's actually live
+  // on your Vercel project — the uploaded local copies here have gone
+  // through several versions, e.g. karlcon_bim_hologram_v10.html through
+  // v21.html, and the deployed one may be named differently).
+  window.HOLOGRAM_URL = params.get('hologram') || 'karlcon_bim_hologram_v10.html';
 })();
 </script>
 
@@ -1522,6 +1531,11 @@ Borrmann et al. (2018) BIM, Ch.5.</div>
             <div class="send-target-label">Pipeline Target</div>
             <div class="send-target-val">POST …/pipeline/generate</div>
           </div>
+          <div id="s4-pipeline-steps" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:9.5px;font-family:var(--font-ui);">
+            <div class="pl-step" id="pl-step-1" data-state="idle"><span class="pl-dot"></span> Payload received</div>
+            <div class="pl-step" id="pl-step-2" data-state="idle"><span class="pl-dot"></span> Generating BIM…</div>
+            <div class="pl-step" id="pl-step-3" data-state="idle"><span class="pl-dot"></span> Sending prompt to Meshy AI</div>
+          </div>
           <button class="send-btn" id="s4-send-claude">
             <i class="fa-solid fa-bolt"></i>
             Generate IFC + Drawings (Python)
@@ -1534,9 +1548,25 @@ Borrmann et al. (2018) BIM, Ch.5.</div>
             <i class="fa-solid fa-file-export"></i>
             Export Agent IFC JSON
           </button>
+          <button class="send-btn-secondary" id="s4-open-hologram">
+            <i class="fa-solid fa-cube"></i>
+            Visualise in Hologram Viewer
+          </button>
         </div>
       </div>
     </div>
+
+    <style>
+      .pl-step{display:flex;align-items:center;gap:7px;color:var(--text3);transition:color .2s}
+      .pl-step .pl-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s,box-shadow .2s}
+      .pl-step[data-state="active"]{color:var(--cyan)}
+      .pl-step[data-state="active"] .pl-dot{background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:pl-pulse 1s ease-in-out infinite}
+      .pl-step[data-state="done"]{color:var(--purple)}
+      .pl-step[data-state="done"] .pl-dot{background:var(--purple);box-shadow:0 0 4px var(--purple)}
+      .pl-step[data-state="error"]{color:#f04460}
+      .pl-step[data-state="error"] .pl-dot{background:#f04460;box-shadow:0 0 4px #f04460}
+      @keyframes pl-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    </style>
 
   </div>
 
@@ -1583,6 +1613,7 @@ let drawing = false;
 let strokes = [];
 let currentPts = [];
 let historyStack = [];
+let redoStack = [];
 let mouseX = 0, mouseY = 0;
 let snapEnabled = true;
 let orthoEnabled = false;
@@ -1967,6 +1998,7 @@ s1Canvas.addEventListener('mouseup', e => {
   drawing = false;
   if (currentPts.length >= 2) {
     historyStack.push(JSON.parse(JSON.stringify(strokes)));
+    redoStack.length = 0; // new action invalidates any redo history
     strokes.push({ tool: currentTool, pts: [...currentPts] });
     autoStraightenLastStroke(); // straighten + corner-correct on commit
     const last = strokes[strokes.length - 1];
@@ -1989,7 +2021,7 @@ s1Canvas.addEventListener('mouseleave', () => { if (!drawing) { mouseX = -9999; 
 
 s1Canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const [x, y] = getPos(e); currentPts = [[x, y]]; renderSketch(); }, { passive: false });
 s1Canvas.addEventListener('touchmove', e => { e.preventDefault(); const [x, y] = getPos(e); mouseX = x; mouseY = y; if (drawing) currentPts.push([x, y]); renderSketch(); }, { passive: false });
-s1Canvas.addEventListener('touchend', e => { e.preventDefault(); drawing = false; if (currentPts.length >= 2) { historyStack.push(JSON.parse(JSON.stringify(strokes))); strokes.push({ tool: currentTool, pts: [...currentPts] }); autoStraightenLastStroke(); wsSendStroke(strokes[strokes.length - 1]); scheduleAutoSync(); updateSidebarProps(); updateStatusBadge(); } currentPts = []; renderSketch(); }, { passive: false });
+s1Canvas.addEventListener('touchend', e => { e.preventDefault(); drawing = false; if (currentPts.length >= 2) { historyStack.push(JSON.parse(JSON.stringify(strokes))); redoStack.length = 0; strokes.push({ tool: currentTool, pts: [...currentPts] }); autoStraightenLastStroke(); wsSendStroke(strokes[strokes.length - 1]); scheduleAutoSync(); updateSidebarProps(); updateStatusBadge(); } currentPts = []; renderSketch(); }, { passive: false });
 
 // Tool selector
 document.querySelectorAll('[data-tool]').forEach(btn => {
@@ -2005,10 +2037,26 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 });
 
 document.getElementById('tb-undo').addEventListener('click', () => {
-  if (historyStack.length > 0) { strokes = historyStack.pop(); updateSidebarProps(); updateStatusBadge(); renderSketch(); setStatus('Undo — ' + strokes.length + ' elements'); scheduleAutoSync(); }
+  if (historyStack.length > 0) {
+    redoStack.push(JSON.parse(JSON.stringify(strokes)));
+    strokes = historyStack.pop();
+    updateSidebarProps(); updateStatusBadge(); renderSketch();
+    setStatus('Undo — ' + strokes.length + ' elements');
+    scheduleAutoSync();
+  }
+});
+document.getElementById('tb-redo').addEventListener('click', () => {
+  if (redoStack.length > 0) {
+    historyStack.push(JSON.parse(JSON.stringify(strokes)));
+    strokes = redoStack.pop();
+    updateSidebarProps(); updateStatusBadge(); renderSketch();
+    setStatus('Redo — ' + strokes.length + ' elements');
+    scheduleAutoSync();
+  }
 });
 document.getElementById('tb-clear').addEventListener('click', () => {
   historyStack.push(JSON.parse(JSON.stringify(strokes)));
+  redoStack.length = 0;
   strokes = []; currentPts = []; drawing = false;
   updateSidebarProps(); updateStatusBadge(); renderSketch();
   setStatus('Canvas cleared');
@@ -2064,6 +2112,7 @@ function updateStatusBadge() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { drawing = false; currentPts = []; renderSketch(); setStatus('ESC — operation cancelled'); }
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); document.getElementById('tb-undo').click(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); document.getElementById('tb-redo').click(); }
   const toolKeys = { w: 'wall', d: 'door', v: 'window', c: 'column', s: 'slab', b: 'beam', t: 'stair', r: 'roof', i: 'dim' };
   if (toolKeys[e.key] && !e.ctrlKey && !e.metaKey && currentStage === 1) {
     const btn = document.querySelector('[data-tool="' + toolKeys[e.key] + '"]');
@@ -3534,9 +3583,17 @@ document.getElementById('s4-send-claude').addEventListener('click', async () => 
   if (top.total_elements === 0) { setStatus('⚠ No elements to send — go to Stage 1 and draw first'); return; }
   if (top.wall_count === 0) { setStatus('⚠ No walls in sketch — Python BIM core requires at least one wall'); return; }
 
-  setStatus('⏳ Sending payload to KarlCON BIM Core (Docker backend)…');
   const btn = document.getElementById('s4-send-claude');
   btn.disabled = true;
+
+  // Step 1 — payload received. True the instant buildPayload() above ran,
+  // so mark it done immediately rather than waiting on the network.
+  setPipelineStep(1, 'done');
+  setStatus('📦 Payload received — ' + top.total_elements + ' element' + (top.total_elements !== 1 ? 's' : ''));
+
+  // Step 2 — generating BIM (Python core: IFC + ISO-128 drawings)
+  setPipelineStep(2, 'active');
+  setStatus('⏳ Generating BIM…');
 
   try {
     const resp = await fetch(`${window.PIPELINE_BASE}/generate`, {
@@ -3551,12 +3608,22 @@ document.getElementById('s4-send-claude').addEventListener('click', async () => 
     }
 
     const data = await resp.json();
+    setPipelineStep(2, 'done');
     renderBimCoreResults(data);
     setStatus('✓ BIM Core generated ' + data.summary.wall_count + ' walls, '
       + data.summary.opening_count + ' openings — IFC + drawings ready');
-    // refresh topology after successful generation
     fetchAgentTopology();
+
+    // Step 3 — hand off to the Hologram Viewer, which builds a Meshy
+    // prompt from these dimensions and sends it for AI 3D generation
+    // (see syncFromParams() / autosync=1 handling in that app).
+    setPipelineStep(3, 'active');
+    setStatus('🚀 Sending prompt to Meshy AI — opening Hologram Viewer…');
+    const hologramUrl = buildHologramUrl(payload);
+    window.open(hologramUrl, '_blank');
+    setPipelineStep(3, 'done');
   } catch (e) {
+    setPipelineStep(2, 'error');
     setStatus('✗ BIM Core unreachable: ' + e.message
       + ' — run: docker run -p 7860:7860 karlcon-bim  (serves /generate + ws:8768)');
     console.error(e);
@@ -3564,6 +3631,66 @@ document.getElementById('s4-send-claude').addEventListener('click', async () => 
     btn.disabled = false;
   }
 });
+
+// Manual "visualise now" escape hatch — sends the current sketch's
+// dimensions to the Hologram Viewer without waiting on the Python core.
+document.getElementById('s4-open-hologram').addEventListener('click', () => {
+  const payload = buildPayload();
+  if (payload.topology.total_elements === 0) {
+    setStatus('⚠ Nothing to visualise yet — draw a sketch first');
+    return;
+  }
+  window.open(buildHologramUrl(payload), '_blank');
+  setStatus('🚀 Opened Hologram Viewer with current plan dimensions');
+});
+
+/** Lights up / resets the 3-step "Payload received → Generating BIM →
+ *  Sending prompt to Meshy AI" tracker in the Stage 4 send panel. */
+function setPipelineStep(n, state) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('pl-step-' + i);
+    if (!el) continue;
+    el.dataset.state = i < n ? 'done' : (i === n ? state : 'idle');
+  }
+}
+
+/** Bounding box of every drawn stroke, in metres, using the same
+ *  px→mm→m conversion (SCALE) the rest of the sketch canvas uses. */
+function computeSketchBoundsMeters() {
+  if (!strokes.length) return null;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  strokes.forEach(s => s.pts.forEach(([x, y]) => {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }));
+  return {
+    width_m: parseFloat(toMetres(maxX - minX)),
+    depth_m: parseFloat(toMetres(maxY - minY)),
+  };
+}
+
+/** Builds the Hologram Viewer URL carrying this plan's dimensions —
+ *  floors/height come straight from the Stage 3 structural config;
+ *  span/depth come from the drawn sketch's bounding box. autosync=1
+ *  tells that app to build a Meshy prompt from these values and send it
+ *  immediately (see the DOMContentLoaded handoff handler there). */
+function buildHologramUrl(payload) {
+  const cfg = payload.structural_config;
+  const bounds = computeSketchBoundsMeters();
+  const qp = new URLSearchParams();
+  qp.set('floors', cfg.storey_count);
+  qp.set('height', cfg.floor_height_m);
+  if (bounds && bounds.width_m > 0) {
+    // The viewer's "Wing Span" slider (1–5) represents metres/4.
+    qp.set('span', Math.max(1, Math.min(5, bounds.width_m / 4)).toFixed(2));
+  }
+  if (bounds && bounds.depth_m > 0) {
+    qp.set('depth', Math.max(4, Math.round(bounds.depth_m)));
+  }
+  qp.set('rot', 0);
+  qp.set('autosync', '1');
+  return window.HOLOGRAM_URL + '?' + qp.toString();
+}
 
 // ── Agent topology panel toggle ─────────────────────────────
 let agentPanelOpen = true;
