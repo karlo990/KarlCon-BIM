@@ -687,11 +687,15 @@ body{
   ];
 
   // ═══════════════════════════════════════════════════════════════════
-  // SITE CAPTURE — grabs a clean top-down reference image of the active
-  // site via the Static Maps API (satellite). This avoids trying to
-  // screenshot the live WebGL 3D tiles canvas, which browsers block
-  // cross-origin, and gives a consistent, well-lit image every time —
-  // exactly the kind of input the BIM Core's Image-to-3D pipeline wants.
+  // SITE CAPTURE — grabs a reference image matching whatever's on screen
+  // in the panorama viewer right now, via the Street View Static API
+  // (a plain JPEG endpoint — NOT a canvas screenshot of the live WebGL
+  // panorama, which browsers block cross-origin). We read the pano's
+  // current position + heading/pitch so the still matches what the user
+  // is actually looking at, then hand that to the BIM Core.
+  //
+  // Falls back to a top-down satellite still (old behavior) only if no
+  // street-view panorama is available/visible at this site.
   // ═══════════════════════════════════════════════════════════════════
   let _capturedDataUrl = null;
 
@@ -702,11 +706,23 @@ body{
     btn.disabled = true;
     setStatus(`Capturing reference image for ${p.name}…`);
     try{
-      const zoom = rangeToZoom(p.range || 2000);
-      const url = `https://maps.googleapis.com/maps/api/staticmap?center=${p.lat},${p.lng}` +
-                  `&zoom=${zoom}&size=640x640&scale=2&maptype=satellite&key=${API_KEY}`;
+      const pano = state.svPano;
+      const panoLive = pano && pano.getVisible && pano.getVisible();
+      let url;
+      if(panoLive){
+        const pos = pano.getPosition();
+        const pov = pano.getPov ? pano.getPov() : { heading: 0, pitch: 0 };
+        url = `https://maps.googleapis.com/maps/api/streetview?size=640x640` +
+              `&location=${pos.lat()},${pos.lng()}` +
+              `&heading=${pov.heading || 0}&pitch=${pov.pitch || 0}&fov=90` +
+              `&key=${API_KEY}`;
+      } else {
+        const zoom = rangeToZoom(p.range || 2000);
+        url = `https://maps.googleapis.com/maps/api/staticmap?center=${p.lat},${p.lng}` +
+              `&zoom=${zoom}&size=640x640&scale=2&maptype=satellite&key=${API_KEY}`;
+      }
       const res = await fetch(url);
-      if(!res.ok) throw new Error('Static Maps request failed (' + res.status + ')');
+      if(!res.ok) throw new Error((panoLive ? 'Street View Static' : 'Static Maps') + ' request failed (' + res.status + ')');
       const blob = await res.blob();
       _capturedDataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -718,7 +734,7 @@ body{
       $('capture-thumb').style.display = 'block';
       $('capture-placeholder').style.display = 'none';
       $('send-btn').disabled = false;
-      setStatus(`Image captured — ${p.name}. Ready to send to BIM Core.`);
+      setStatus(`Image captured (${panoLive ? 'street view' : 'satellite'}) — ${p.name}. Ready to send to BIM Core.`);
     } catch(e){
       setStatus('Capture failed: ' + e.message, true);
     } finally {
@@ -748,7 +764,7 @@ body{
   };
 
   window.goToBIM = function(){
-    location.href = location.origin + '/karlcon_bim_hologram_v8_gesturecast__4_.html';
+    location.href = location.origin + '/';
   };
 })();
 </script>
