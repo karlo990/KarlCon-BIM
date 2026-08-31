@@ -76,13 +76,13 @@ body::before{display:none;}
 #header{
   position:fixed;top:0;left:0;right:0;
   height:48px;
-  background:linear-gradient(135deg,rgba(10,14,26,0.96) 0%,rgba(8,11,22,0.98) 100%);
-  border-bottom:1px solid rgba(168,85,247,0.10);
+  background:linear-gradient(135deg,rgba(15,35,90,0.96) 0%,rgba(10,25,70,0.98) 100%);
+  border-bottom:1px solid rgba(80,140,255,0.18);
   display:flex;align-items:center;gap:16px;
   padding:0 20px;z-index:200;
-  box-shadow:0 4px 40px rgba(0,0,0,0.6),
+  box-shadow:0 4px 40px rgba(0,20,80,0.5),
              0 1px 0 rgba(255,255,255,0.03),
-             inset 0 1px 0 rgba(168,85,247,0.05);
+             inset 0 1px 0 rgba(80,140,255,0.08);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
 }
@@ -2720,13 +2720,20 @@ function buildBIM(geo){
   const fH    = geo.floor_height || params.height;
   const W     = geo.wing_span    || params.span * 4;
   const D     = geo.depth        || params.depth;
-  const colHex= geo.holo_colour  || '#00ffe7';
+  const colHex= geo.holo_colour  || '#a855f7';
   const col   = new THREE.Color(colHex);
 
+  // Per-layer BIM colours instead of one flat hologram tint — reads like an
+  // actual multi-material BIM model (concrete slabs, steel/gold columns,
+  // glazed facade) instead of a monochrome wireframe ghost.
+  const colSlab = new THREE.Color('#c9c4dd');   // concrete floor slabs — warm light grey
+  const colCol  = new THREE.Color('#d4aa3c');   // columns — structural gold
+  const colFac  = new THREE.Color('#5fd6e8');   // facade — glazed cyan-blue
+
   const matLine = new THREE.LineBasicMaterial({ color:col, transparent:true, opacity:params.alpha });
-  const matSlab = new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.08, side:THREE.DoubleSide });
-  const matCol  = new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.15, side:THREE.DoubleSide });
-  const matFac  = new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.04, wireframe:layers.wire, side:THREE.DoubleSide });
+  const matSlab = new THREE.MeshBasicMaterial({ color:colSlab, transparent:true, opacity:0.16, side:THREE.DoubleSide });
+  const matCol  = new THREE.MeshBasicMaterial({ color:colCol,  transparent:true, opacity:0.55, side:THREE.DoubleSide });
+  const matFac  = new THREE.MeshBasicMaterial({ color:colFac,  transparent:true, opacity:0.10, wireframe:layers.wire, side:THREE.DoubleSide });
 
   // Grid helper
   if(layers.grid){
@@ -2800,7 +2807,7 @@ function buildBIM(geo){
     floor_height: geo.floor_height || params.height,
     wing_span:    geo.wing_span    || params.span * 4,
     depth:        geo.depth        || params.depth,
-    holo_colour:  geo.holo_colour  || '#00ffe7',
+    holo_colour:  geo.holo_colour  || '#a855f7',
   });
   // FLICKER FIX: only send bim_update when geometry actually changed
   const _geoKey = JSON.stringify([
@@ -3200,6 +3207,45 @@ const MeshyPipeline = (() => {
 
   document.addEventListener('DOMContentLoaded', loadSavedKeyHint);
 
+  // ── Handoff from the KarlCON BIM Pipeline app ─────────────────────────
+  // The Sketch → Parser pipeline tool (karlcon_bim_pipeline_v4.html) can
+  // send a drawn plan's dimensions straight into this viewer via URL query
+  // params, e.g.:
+  //   karlcon_bim_hologram_v10.html?floors=3&span=2.5&height=3&depth=12&rot=0&autosync=1
+  // If present, they populate the BIM Parameters sliders and (with
+  // autosync=1) automatically fire the same SYNC → REGENERATE MODEL flow
+  // the button uses — building a Meshy prompt from those dimensions and
+  // sending it straight to the AI generation pipeline, so a plan drawn in
+  // the pipeline tool shows up here as a 3D model without manual re-entry.
+  document.addEventListener('DOMContentLoaded', function () {
+    const qp = new URLSearchParams(location.search);
+    if (![...qp.keys()].some(k => ['floors','span','height','depth','rot'].includes(k))) return;
+
+    const sliderMap = {
+      floors: 'sl-floors',
+      span:   'sl-span',
+      height: 'sl-height',
+      depth:  'sl-depth',
+      rot:    'sl-rot',
+    };
+    Object.keys(sliderMap).forEach((key) => {
+      if (!qp.has(key)) return;
+      const el = document.getElementById(sliderMap[key]);
+      if (!el) return;
+      el.value = qp.get(key);
+      updateParam(key, el.value);
+    });
+
+    addLog('ok', '[AI-Model] Received plan dimensions from BIM Pipeline — ' +
+      [...qp.entries()].filter(([k]) => sliderMap[k]).map(([k, v]) => `${k}:${v}`).join(', '));
+
+    if (qp.get('autosync') === '1') {
+      // Small delay so the sliders/labels finish updating and Three.js has
+      // a frame to settle before we build + send the Meshy prompt.
+      setTimeout(() => { if (typeof syncFromParams === 'function') syncFromParams(); }, 300);
+    }
+  });
+
   return { saveKey, setTab, onFileChosen, onDrop, generateFromImage, generateFromPrompt, syncFromParams };
 })();
 
@@ -3542,7 +3588,7 @@ function updateParam(name, val){
       depth: parseFloat(document.getElementById('sl-depth').value),
       rot: parseFloat(document.getElementById('sl-rot').value),
       confidence:0.5
-    }, { holo_colour: lastDecodedGeo.holo_colour || '#00ffe7' }));
+    }, { holo_colour: lastDecodedGeo.holo_colour || '#a855f7' }));
   }
 }
 
@@ -3561,7 +3607,7 @@ function toggleLayer(name, el){
     depth: parseFloat(document.getElementById('sl-depth').value),
     rot: parseFloat(document.getElementById('sl-rot').value),
     confidence:0.5
-  }, { holo_colour: lastDecodedGeo.holo_colour || '#00ffe7' }));
+  }, { holo_colour: lastDecodedGeo.holo_colour || '#a855f7' }));
 }
 
 function toggleGhost(el){
@@ -4254,8 +4300,8 @@ const OrbCanvas = (() => {
 
     // ── deep background glow ──────────────────────────────────────────────
     let g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 86);
-    g.addColorStop(0,   'rgba(0,195,235,0.11)');
-    g.addColorStop(0.5, 'rgba(0,110,190,0.06)');
+    g.addColorStop(0,   'rgba(40,100,255,0.13)');
+    g.addColorStop(0.5, 'rgba(20,60,200,0.07)');
     g.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, SIZE, SIZE);
@@ -4315,10 +4361,10 @@ const OrbCanvas = (() => {
       const alpha = (0.10 + df * 0.85) * twk;
       const size  = 0.55 + df * 2.1;
 
-      // Colour: far = deep teal, near = bright cyan/white core
-      const rv = Math.round(df * 20);
-      const gv = Math.round(110 + df * 118);
-      const bv = Math.round(148 + df * 88);
+      // Colour: far = deep navy, near = bright blue/white core
+      const rv = Math.round(20 + df * 60);
+      const gv = Math.round(60 + df * 90);
+      const bv = Math.round(190 + df * 65);
 
       ctx.beginPath();
       ctx.arc(sx, sy, size, 0, 6.2832);
@@ -4330,7 +4376,7 @@ const OrbCanvas = (() => {
         const haloA = (df - 0.75) * 0.18 * twk;
         ctx.beginPath();
         ctx.arc(sx, sy, size * 3.2, 0, 6.2832);
-        ctx.fillStyle = `rgba(15,210,240,${haloA.toFixed(3)})`;
+        ctx.fillStyle = `rgba(60,130,255,${haloA.toFixed(3)})`;
         ctx.fill();
       }
     }
@@ -4346,8 +4392,8 @@ const OrbCanvas = (() => {
     // ── front highlight pulse ─────────────────────────────────────────────
     const pulse = 0.07 + 0.03 * Math.sin(t * 1.7);
     g = ctx.createRadialGradient(CX-8, CY-12, 0, CX, CY, 62);
-    g.addColorStop(0,   `rgba(180,240,255,${pulse})`);
-    g.addColorStop(0.35,`rgba(10,200,240,${(pulse*0.45).toFixed(3)})`);
+    g.addColorStop(0,   `rgba(210,225,255,${pulse})`);
+    g.addColorStop(0.35,`rgba(50,110,255,${(pulse*0.45).toFixed(3)})`);
     g.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, SIZE, SIZE);
