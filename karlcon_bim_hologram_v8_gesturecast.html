@@ -323,6 +323,112 @@ body::before{
 }
 .toggle.on::after{left:17px;background:var(--c);box-shadow:0 0 5px var(--c)}
 
+/* ═══════════════════════════════════════════════════
+   MESHY AI INPUT PANEL — Image / Prompt toggle tabs,
+   task status readout, progress bar. Result GLB is
+   loaded into the scene and inherits the same gesture
+   rotate/zoom transform as bimGroup (see meshyGroup).
+═══════════════════════════════════════════════════ */
+#meshy-tabs{
+  display:flex;gap:4px;margin-bottom:10px;
+}
+.meshy-tab{
+  flex:1;text-align:center;padding:6px 4px;
+  font-family:var(--fm);font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;cursor:pointer;
+  background:rgba(0,210,230,.04);
+  border:1px solid rgba(0,210,230,.14);
+  border-radius:var(--r1);
+  color:rgba(0,210,230,.42);
+  transition:all .2s;
+}
+.meshy-tab:hover{border-color:rgba(0,210,230,.32);color:rgba(0,210,230,.7)}
+.meshy-tab.active{
+  background:rgba(0,210,230,.14);border-color:rgba(0,210,230,.5);
+  color:var(--c);box-shadow:0 0 12px rgba(0,210,230,.14);
+}
+.meshy-pane{display:none}
+.meshy-pane.active{display:block}
+
+#meshy-key-row{
+  display:flex;gap:5px;margin-bottom:8px;
+}
+#meshy-key-row input{
+  flex:1;min-width:0;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(0,210,230,.16);
+  border-radius:var(--r1);
+  color:rgba(0,210,230,.75);
+  font-family:var(--fm);font-size:9px;
+  padding:6px 8px;outline:none;
+}
+#meshy-key-row input:focus{border-color:rgba(0,210,230,.45)}
+#meshy-key-save{
+  flex-shrink:0;padding:6px 10px;
+  background:rgba(0,210,230,.08);border:1px solid rgba(0,210,230,.3);
+  border-radius:var(--r1);color:rgba(0,210,230,.65);
+  font-family:var(--fm);font-size:9px;letter-spacing:.6px;
+  cursor:pointer;transition:all .2s;
+}
+#meshy-key-save:hover{background:rgba(0,210,230,.18);color:var(--c)}
+
+#meshy-drop{
+  border:1px dashed rgba(0,210,230,.28);
+  border-radius:var(--r2);
+  padding:16px 10px;text-align:center;
+  cursor:pointer;margin-bottom:8px;
+  transition:all .2s;
+  background:rgba(0,210,230,.02);
+}
+#meshy-drop:hover{border-color:rgba(0,210,230,.55);background:rgba(0,210,230,.05)}
+#meshy-drop.has-file{border-style:solid;border-color:rgba(0,232,152,.4)}
+#meshy-drop-text{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.45);letter-spacing:.4px;line-height:1.7}
+#meshy-drop-thumb{max-width:100%;max-height:90px;border-radius:var(--r1);margin-bottom:6px;display:none}
+
+#meshy-prompt{
+  width:100%;min-height:64px;resize:vertical;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(0,210,230,.16);
+  border-radius:var(--r1);
+  color:rgba(0,210,230,.8);
+  font-family:var(--fm);font-size:10px;line-height:1.5;
+  padding:8px;outline:none;margin-bottom:8px;
+}
+#meshy-prompt:focus{border-color:rgba(0,210,230,.45)}
+#meshy-prompt::placeholder{color:rgba(0,210,230,.25)}
+
+#meshy-art-style{
+  width:100%;margin-bottom:8px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(0,210,230,.16);
+  border-radius:var(--r1);
+  color:rgba(0,210,230,.75);
+  font-family:var(--fm);font-size:9px;
+  padding:6px 8px;outline:none;
+}
+
+#meshy-status-block{
+  margin-top:4px;padding:8px 9px;
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(0,210,230,.12);
+  border-radius:var(--r1);
+}
+#meshy-status-text{
+  font-family:var(--fm);font-size:9px;letter-spacing:.4px;
+  color:rgba(0,210,230,.55);margin-bottom:6px;
+}
+#meshy-progress-wrap{
+  background:rgba(0,0,0,.4);border-radius:var(--rpill);
+  height:3px;overflow:hidden;
+}
+#meshy-progress-bar{
+  height:100%;width:0%;border-radius:var(--rpill);
+  background:linear-gradient(90deg,var(--c2),var(--green));
+  transition:width .4s ease;
+}
+#meshy-progress-bar.error{background:var(--red)}
+
+
 /* ── BUTTONS — index.html exact values ── */
 .btn{
   width:100%;padding:7px;margin-bottom:5px;
@@ -628,32 +734,33 @@ body::before{
 #gesture-led.tracking{background:var(--c);box-shadow:0 0 8px var(--c);animation:pulse 1s ease-in-out infinite}
 #gesture-led.active-move{background:var(--gold);box-shadow:0 0 8px var(--gold)}
 
-/* Gesture landmark canvas (PiP webcam overlay, bottom-left of viewport) */
+/* Gesture landmark PiP — corner preview box REMOVED per request.
+   The <video> stays as the hidden MediaPipe camera source only;
+   landmarks are now drawn full-frame on #gesture-canvas-main (below). */
 #gesture-pip{
-  position:fixed;bottom:40px;left:280px;
-  width:200px;height:150px;
-  background:rgba(4,5,13,.92);
-  border:1px solid rgba(0,210,230,.35);
-  border-radius:var(--r2);z-index:9999;
-  display:none;overflow:hidden;
-  box-shadow:0 0 16px rgba(0,210,230,.15);
+  position:fixed;width:1px;height:1px;
+  overflow:hidden;opacity:0;pointer-events:none;
+  left:-9999px;top:-9999px;
 }
-#gesture-pip.visible{display:block}
 #gesture-video{
   width:100%;height:100%;object-fit:cover;
-  transform:scaleX(-1) scaleY(-1);opacity:.55;
   display:block;
 }
 #gesture-canvas{
+  display:none; /* legacy PiP canvas, no longer rendered to */
+}
+#pip-label{ display:none; }
+
+/* Full-frame gesture landmark overlay — sits directly on the main
+   viewport/video so the skeletal mesh tracks the live hand in-frame
+   instead of a separate corner window. Mirrored to match the mirrored
+   camera view shown in the main frame. */
+#gesture-canvas-main{
   position:absolute;inset:0;
   width:100%;height:100%;
-  transform:scaleX(-1) scaleY(-1);
-}
-#pip-label{
-  position:absolute;bottom:4px;left:0;right:0;
-  text-align:center;font-family:var(--fm);font-size:7px;
-  color:rgba(0,210,230,.35);letter-spacing:1px;
+  z-index:26;
   pointer-events:none;
+  transform:scaleX(-1);
 }
 
 /* Gesture mode HUD — shows current gesture + confidence */
@@ -1063,8 +1170,8 @@ body::before{
   #gesture-pill { top: 44px; font-size: 8px; padding: 4px 10px; }
   #nano-pill    { top: 74px; font-size: 8px; padding: 4px 10px; }
 
-  /* ── GESTURE PiP: reposition bottom-left (no side panel offset) ── */
-  #gesture-pip  { left: 8px; bottom: 66px; width: 160px; height: 120px; }
+  /* ── GESTURE PiP corner box stays removed on mobile too ── */
+  #gesture-pip  { left:-9999px; top:-9999px; width:1px; height:1px; }
 
   /* ══════════════════════════════════════════
      MOBILE NAV BAR — fixed bottom tab bar
@@ -1292,7 +1399,7 @@ body::before{
 
     <!-- Icon strip shown only when collapsed -->
     <div id="left-icon-strip">
-      <div class="lip-icon" data-target="pb-pipeline-input" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">⬡</div>
+      <div class="lip-icon" data-target="pb-meshy-input" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◆</div>
       <div class="lip-icon" data-target="pb-ws-pipeline" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◉</div>
       <div class="lip-icon" data-target="pb-bim-params" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◈</div>
       <div class="lip-icon" data-target="pb-render-layers" data-panel="left-panel-inner" onclick="iconScrollTo(this,'left')">◎</div>
@@ -1301,12 +1408,46 @@ body::before{
 
     <!-- Scrollable panel content — hidden when collapsed -->
     <div id="left-panel-inner">
+    <!-- MESHY AI INPUT — Image-to-3D / Text-to-3D generation.
+         Result GLB loads into meshyGroup, which inherits the same
+         gesture-driven rotate/zoom transform as bimGroup. -->
     <div class="panel-block">
-      <div class="panel-block-title" id="pb-pipeline-input"><span class="pbt-icon">⬡</span> PIPELINE INPUT</div>
-      <div id="sync-status-block">
-        <div id="sync-status-icon" style="font-size:16px;margin-bottom:4px;text-align:center">◈</div>
-        <div id="sync-status-text" style="text-align:center;line-height:1.8">Awaiting auto-sync<br>from Pipeline canvas…</div>
-        <div id="sync-status-meta" style="margin-top:5px;opacity:.55;font-size:8px;text-align:center">Polls /model/pipeline · 3s</div>
+      <div class="panel-block-title" id="pb-meshy-input"><span class="pbt-icon">◆</span> AI MODEL INPUT</div>
+
+      <div id="meshy-key-row">
+        <input type="password" id="meshy-api-key" placeholder="Karvision Key" autocomplete="off" spellcheck="false"/>
+        <button type="button" id="meshy-key-save" onclick="MeshyPipeline.saveKey()">SAVE</button>
+      </div>
+
+      <div id="meshy-tabs">
+        <div class="meshy-tab active" data-pane="meshy-pane-image" onclick="MeshyPipeline.setTab(this,'meshy-pane-image')">◈ Image Input</div>
+        <div class="meshy-tab" data-pane="meshy-pane-prompt" onclick="MeshyPipeline.setTab(this,'meshy-pane-prompt')">◈ Prompt Input</div>
+      </div>
+
+      <div class="meshy-pane active" id="meshy-pane-image">
+        <input type="file" id="meshy-file-input" accept="image/png,image/jpeg" style="display:none" onchange="MeshyPipeline.onFileChosen(this.files)"/>
+        <div id="meshy-drop" onclick="document.getElementById('meshy-file-input').click()"
+             ondragover="event.preventDefault();this.style.borderColor='rgba(0,210,230,.6)'"
+             ondragleave="this.style.borderColor=''"
+             ondrop="MeshyPipeline.onDrop(event)">
+          <img id="meshy-drop-thumb" alt=""/>
+          <div id="meshy-drop-text">◈ Drop a drone photo / reference image<br>or click to browse (JPG/PNG)</div>
+        </div>
+        <button type="button" class="btn primary" id="meshy-gen-image-btn" onclick="MeshyPipeline.generateFromImage()">⬡ GENERATE 3D FROM IMAGE</button>
+      </div>
+
+      <div class="meshy-pane" id="meshy-pane-prompt">
+        <textarea id="meshy-prompt" placeholder="Describe the structure — e.g. 'isometric architectural massing, flat roof, glass facade, engineering elevation drawing'"></textarea>
+        <select id="meshy-art-style">
+          <option value="realistic">Art style: Realistic</option>
+          <option value="sculpture">Art style: Sculpture (clay/matte)</option>
+        </select>
+        <button type="button" class="btn primary" id="meshy-gen-prompt-btn" onclick="MeshyPipeline.generateFromPrompt()">⬡ GENERATE 3D FROM PROMPT</button>
+      </div>
+
+      <div id="meshy-status-block">
+        <div id="meshy-status-text">Awaiting input — image or prompt.</div>
+        <div id="meshy-progress-wrap"><div id="meshy-progress-bar"></div></div>
       </div>
     </div>
 
@@ -1327,6 +1468,8 @@ body::before{
       <div class="ctrl-row"><label>Floor H (m)</label><input type="range" id="sl-height" min="2" max="6" value="3" step="0.5" oninput="updateParam('height',this.value)"/><span class="val" id="v-height">3.0</span></div>
       <div class="ctrl-row"><label>Depth (m)</label><input type="range" id="sl-depth" min="4" max="30" value="10" oninput="updateParam('depth',this.value)"/><span class="val" id="v-depth">10</span></div>
       <div class="ctrl-row"><label>Rotation</label><input type="range" id="sl-rot" min="0" max="360" value="30" oninput="updateParam('rot',this.value)"/><span class="val" id="v-rot">30°</span></div>
+      <button type="button" class="btn primary" id="bim-sync-btn" onclick="MeshyPipeline.syncFromParams()" title="Builds a prompt from the current Floors/Span/Height/Depth/Rotation values and regenerates the AI model to match" style="margin-top:6px">⬡ SYNC → REGENERATE MODEL</button>
+      <div id="bim-sync-hint" class="dim-text" style="margin-top:4px;font-size:8px">Sends current sliders as a prompt to re-generate this model.</div>
     </div>
 
     <div class="panel-block">
@@ -1347,7 +1490,8 @@ body::before{
       <button type="button" class="btn morph-btn" id="nano-morph-btn" onclick="triggerNanoMorph()">⬡ NANOMORPH: SOLID → BIM</button>
       <button type="button" class="btn gesture-btn" id="gesture-toggle-btn" onclick="toggleGestureEngine()">◈ GESTURE CONTROL: OFF</button>
       <button type="button" class="btn" id="gesture-source-btn" onclick="toggleGestureSource()" title="Switch gesture input between PC webcam and PTZ phone stream (karlcon_server_ptz.py /screen.mjpeg)" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ GESTURE SOURCE: WEBCAM</button>
-      <button type="button" class="btn" id="pip-toggle-btn" onclick="togglePiP(document.getElementById('t-pip'))" title="Show/hide the gesture camera preview (with hand landmark overlay)" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ SHOW GESTURE PREVIEW</button>
+      <button type="button" class="btn" id="pip-toggle-btn" onclick="togglePiP(document.getElementById('t-pip'))" title="Show/hide the hand landmark skeleton drawn directly on the main frame" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ SHOW GESTURE OVERLAY</button>
+      <button type="button" class="btn" id="relay-gesture-btn" onclick="toggleRelayGesture()" title="Drive the model from the Python gesture tracker's quaternion/curl data via the HF Space relay, instead of in-browser MediaPipe. Falls back automatically if the relay's gesture channel drops." style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ RELAY GESTURE: OFF</button>
       <button type="button" class="btn" id="calibrate-btn" onclick="startCalibration()" title="70-second guided session to collect 70 samples per gesture and warm-start the classifier" style="display:none;border-color:rgba(212,170,60,.35);color:rgba(212,170,60,.65);background:rgba(212,170,60,.04)">◈ CALIBRATE GESTURES</button>
       <button type="button" class="btn" id="fan-mode-btn" onclick="toggleFanMode()" title="Split canvas into 4 rotated views for Pepper's Ghost pyramid display" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ FAN OFF</button>
       <button type="button" class="btn" onclick="exportView()">↯ EXPORT PNG SNAPSHOT</button>
@@ -1380,12 +1524,17 @@ body::before{
       <span id="gesture-pill-text">GESTURE ENGINE OFFLINE</span>
     </div>
 
-    <!-- GESTURE PiP (webcam + landmark overlay) -->
+    <!-- Hidden camera source only — no longer shown as a corner PiP box.
+         MediaPipe still reads frames from this <video>. -->
     <div id="gesture-pip">
       <video id="gesture-video" autoplay playsinline muted></video>
       <canvas id="gesture-canvas"></canvas>
       <div id="pip-label">GE v16.0 · WipeDetector · DSLNet · 1€Filter · MHA-ATTN · TempScale(T=1.8) · BoneVec(+80dim)</div>
     </div>
+
+    <!-- Full-frame hand-landmark overlay — skeleton + red joint dots drawn
+         directly on the main viewport, tracking the live camera feed. -->
+    <canvas id="gesture-canvas-main"></canvas>
 
     <!-- GESTURE HUD (bottom-right) -->
     <div id="gesture-hud">
@@ -1547,7 +1696,7 @@ body::before{
         <span style="font-size:7.5px;color:rgba(212,170,60,.45)">DSLNet arXiv:2509.08661 · Liu IEEE-TM 2023 · Patrick 2021 · Uboweja 2023</span>
       </div>
       <div style="margin-top:8px">
-        <div class="toggle-row"><span>Show Webcam PiP</span><div class="toggle" id="t-pip" onclick="togglePiP(this)"></div></div>
+        <div class="toggle-row"><span>Show Gesture Overlay</span><div class="toggle" id="t-pip" onclick="togglePiP(this)"></div></div>
         <div class="toggle-row"><span>Draw Landmarks</span><div class="toggle on" id="t-lm" onclick="gestureState.drawLandmarks=this.classList.toggle('on')"></div></div>
         <div class="toggle-row"><span>Dead-zone Filter</span><div class="toggle on" id="t-dz" onclick="gestureState.deadzone=this.classList.toggle('on')"></div></div>
         <div class="toggle-row"><span>Exponential Smooth</span><div class="toggle on" id="t-smooth" onclick="gestureState.smooth=this.classList.toggle('on')"></div></div>
@@ -1743,6 +1892,9 @@ body::before{
 })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- GLTFLoader — r128-matched build, used to load Meshy AI generated models
+     (Image-to-3D / Text-to-3D GLB output) into the existing Three.js scene. -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <!-- onnxruntime-web — client-side depth inference (Depth Anything V2 small,
      quantised ONNX). WebGPU backend when available, WASM fallback otherwise.
      Loaded eagerly but the model itself is fetched lazily by KarvisionDepth
@@ -1968,10 +2120,50 @@ var KarvisionDepth = (function(){
     return _mesh;
   }
 
+  // ---- orientation controls -------------------------------------------------
+  // Relay/phone frames have been arriving upside-down (see reported hologram
+  // screenshot). Tunable at runtime from the console without a redeploy:
+  //   window.KARVISION_ROTATE_180 = false   // turn the 180° fix off
+  //   window.KARVISION_MIRROR_X   = true    // add a selfie-style horizontal flip
+  function _rotate180() { return window.KARVISION_ROTATE_180 !== false; } // default ON
+  function _mirrorX()   { return !!window.KARVISION_MIRROR_X; }           // default OFF
+
+  // ---- draw a bitmap into a target 2D context using cover-crop framing -----
+  // (like CSS `object-fit:cover`) instead of squishing the whole source frame
+  // into the target box. Center-crops whichever axis has excess so only the
+  // relevant middle of the frame is used — no stray background/edges — while
+  // still filling the target completely, edge-to-edge, with correct aspect
+  // ratio. Also applies the orientation fix above in the same pass.
+  function _drawCover(ctx, bitmap, tw, th) {
+    var sw = bitmap.width, sh = bitmap.height;
+    var srcAspect = sw / sh, dstAspect = tw / th;
+    var cw, ch, cx, cy;
+    if (srcAspect > dstAspect) {
+      // source wider than target -> crop the left/right edges off
+      ch = sh; cw = sh * dstAspect;
+      cx = (sw - cw) / 2; cy = 0;
+    } else {
+      // source taller than target -> crop the top/bottom edges off
+      cw = sw; ch = sw / dstAspect;
+      cx = 0; cy = (sh - ch) / 2;
+    }
+    ctx.save();
+    ctx.clearRect(0, 0, tw, th);
+    if (_rotate180() || _mirrorX()) {
+      ctx.translate(tw / 2, th / 2);
+      if (_rotate180()) ctx.rotate(Math.PI);
+      ctx.scale(_mirrorX() ? -1 : 1, 1);
+      ctx.translate(-tw / 2, -th / 2);
+    }
+    ctx.drawImage(bitmap, cx, cy, cw, ch, 0, 0, tw, th);
+    ctx.restore();
+  }
+
   // ---- public: feed one decoded bitmap in (call from _dispatchFrame) -------
   function pushFrame(bitmap) {
-    // Colour: every frame, cheap.
-    _colorCtx.drawImage(bitmap, 0, 0, W, H);
+    // Colour: every frame, cheap. Cover-crop + orientation-correct so the
+    // backdrop always fills the plane edge-to-edge, right-side-up.
+    _drawCover(_colorCtx, bitmap, W, H);
     if (_colorTexture) {
       _colorTexture.needsUpdate = true;
       if (_mesh && _mesh.material.opacity < 1.0) {
@@ -1979,10 +2171,11 @@ var KarvisionDepth = (function(){
       }
     }
 
-    // Depth: throttled.
+    // Depth: throttled. Same cover-crop/orientation so the displacement map
+    // lines up 1:1 with what's actually on screen.
     _frameN++;
     if (_frameN % DEPTH_EVERY_N === 0) {
-      _inCtx.drawImage(bitmap, 0, 0, W, H);
+      _drawCover(_inCtx, bitmap, W, H);
       _runDepth(); // async, fire-and-forget — never blocks the caller
     }
   }
@@ -2435,6 +2628,18 @@ function animate(){
     const s = window._objScale;
     bimGroup.scale.set(s, s, s);
   }
+  // Apply the SAME gesture-driven transform to a Meshy-generated model,
+  // so it rotates/zooms identically to bimGroup with zero extra gesture code.
+  if (window.meshyGroup) {
+    window.meshyGroup.rotation.y = window._objRotY + (window.meshyGroup.userData.baseRotY || 0);
+    window.meshyGroup.rotation.x = window._objRotX;
+    const s = window._objScale;
+    window.meshyGroup.scale.set(
+      s * window.meshyGroup.userData.baseScale,
+      s * window.meshyGroup.userData.baseScale,
+      s * window.meshyGroup.userData.baseScale
+    );
+  }
   // Broadcast AFTER physics integration so scale is current-frame value
   broadcastObjTransform();
 
@@ -2625,6 +2830,324 @@ function buildBIM(geo){
   // NanoMorph: update BIM vertex targets for crystallisation [N6]
   if (typeof NanoMorph !== 'undefined') NanoMorph.onBIMReady();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MESHY AI PIPELINE — Image-to-3D / Text-to-3D generation via api.meshy.ai
+//
+// Two input toggles feed the same downstream loader:
+//   Image Input  -> POST /openapi/v1/image-to-3d   (drone photo / reference img)
+//   Prompt Input -> POST /openapi/v2/text-to-3d     (engineering-drawing prompt)
+//
+// Both are async task APIs: create -> poll -> model_urls.glb -> GLTFLoader.
+// The loaded model is parented under window.meshyGroup, which the render
+// loop (animate()) already drives with the exact same window._objRotX/Y /
+// _objScale values as bimGroup — so gesture rotate/zoom "just works" with
+// no changes to the gesture engine itself.
+//
+// Docs: https://docs.meshy.ai/en/api/image-to-3d · /text-to-3d · /convert
+// ═══════════════════════════════════════════════════════════════════════════
+const MeshyPipeline = (() => {
+  const BASE = 'https://api.meshy.ai';
+  const KEY_STORAGE = 'karlcon_meshy_api_key';
+  const POLL_MS = 4000;
+
+  let _chosenFile = null;
+  let _polling    = false;
+
+  // ── API key (kept only in localStorage, never hardcoded) ────────────────
+  function getKey() {
+    const inputVal = document.getElementById('meshy-api-key').value.trim();
+    if (inputVal) return inputVal;
+    try { return localStorage.getItem(KEY_STORAGE) || ''; } catch(e) { return ''; }
+  }
+  function saveKey() {
+    const val = document.getElementById('meshy-api-key').value.trim();
+    if (!val) { setStatus('Enter a Karvision Key before saving.', 0, true); return; }
+    try { localStorage.setItem(KEY_STORAGE, val); } catch(e) {}
+    document.getElementById('meshy-api-key').value = '';
+    document.getElementById('meshy-api-key').placeholder = 'Karvision Key (saved ✓)';
+    setStatus('Karvision Key saved locally for this browser.', 0);
+  }
+  function loadSavedKeyHint() {
+    try {
+      if (localStorage.getItem(KEY_STORAGE)) {
+        document.getElementById('meshy-api-key').placeholder = 'Karvision Key (saved ✓)';
+      }
+    } catch(e) {}
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  function setTab(el, paneId) {
+    document.querySelectorAll('.meshy-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.meshy-pane').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(paneId).classList.add('active');
+  }
+
+  // ── Image input handling ─────────────────────────────────────────────
+  function onFileChosen(files) {
+    if (!files || !files[0]) return;
+    _chosenFile = files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      const thumb = document.getElementById('meshy-drop-thumb');
+      thumb.src = e.target.result;
+      thumb.style.display = 'block';
+      document.getElementById('meshy-drop-text').textContent = _chosenFile.name;
+      document.getElementById('meshy-drop').classList.add('has-file');
+    };
+    reader.readAsDataURL(_chosenFile);
+  }
+  function onDrop(ev) {
+    ev.preventDefault();
+    ev.currentTarget.style.borderColor = '';
+    if (ev.dataTransfer.files && ev.dataTransfer.files[0]) onFileChosen(ev.dataTransfer.files);
+  }
+
+  function fileToDataURI(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload  = () => resolve(r.result); // already a data: URI
+      r.onerror = () => reject(new Error('Could not read file'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  // ── Status UI ─────────────────────────────────────────────────────────
+  function setStatus(text, pct, isError) {
+    document.getElementById('meshy-status-text').textContent = text;
+    const bar = document.getElementById('meshy-progress-bar');
+    bar.style.width = Math.max(0, Math.min(100, pct||0)) + '%';
+    bar.classList.toggle('error', !!isError);
+  }
+
+  // ── Generic task poller (works for image-to-3d and text-to-3d) ───────
+  async function pollTask(kind, taskId, apiKey) {
+    _polling = true;
+    while (_polling) {
+      let res, data;
+      try {
+        res  = await fetch(`${BASE}/openapi/v1/${kind}/${taskId}`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        data = await res.json();
+      } catch (e) {
+        setStatus('Network error while polling — retrying…', 0, true);
+        await new Promise(r => setTimeout(r, POLL_MS));
+        continue;
+      }
+      if (!res.ok) {
+        setStatus(`Karvision error ${res.status}: ${(data && data.message) || 'request failed'}`, 0, true);
+        _polling = false;
+        return null;
+      }
+      if (data.status === 'SUCCEEDED') {
+        setStatus('Model ready — loading into scene…', 100);
+        _polling = false;
+        return data;
+      }
+      if (data.status === 'FAILED' || data.status === 'CANCELED') {
+        setStatus(`Task ${data.status.toLowerCase()}${data.task_error ? ': ' + data.task_error.message : ''}`, 0, true);
+        _polling = false;
+        return null;
+      }
+      setStatus(`${data.status} · ${data.progress||0}%`, data.progress||0);
+      await new Promise(r => setTimeout(r, POLL_MS));
+    }
+    return null;
+  }
+
+  // ── Image -> 3D ───────────────────────────────────────────────────────
+  async function generateFromImage() {
+    const apiKey = getKey();
+    if (!apiKey) return setStatus('Add your Karvision Key above first.', 0, true);
+    if (!_chosenFile) return setStatus('Choose or drop an image first.', 0, true);
+
+    const btn = document.getElementById('meshy-gen-image-btn');
+    btn.disabled = true;
+    setStatus('Uploading image…', 4);
+
+    try {
+      const dataUri = await fileToDataURI(_chosenFile);
+      const res = await fetch(`${BASE}/openapi/v1/image-to-3d`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url:      dataUri,
+          should_texture: true,
+          enable_pbr:     true,
+          target_formats: ['glb'],
+        }),
+      });
+      const created = await res.json();
+      if (!res.ok) throw new Error(created.message || `HTTP ${res.status}`);
+
+      setStatus('Task created — generating (usually <2 min)…', 8);
+      const task = await pollTask('image-to-3d', created.result, apiKey);
+      if (task && task.model_urls && task.model_urls.glb) {
+        await loadGLBIntoScene(task.model_urls.glb, { source: 'image', thumbnail: task.thumbnail_url });
+      }
+    } catch (e) {
+      setStatus('Image-to-3D failed: ' + e.message, 0, true);
+      addLog('err', '[AI-Model] image-to-3d failed: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Prompt -> 3D ──────────────────────────────────────────────────────
+  // Shared by the Prompt-tab button and the BIM-params SYNC button — both
+  // just supply a prompt string; the generate/poll/refine/load flow is
+  // identical either way.
+  async function runTextTo3D(prompt, artStyle, btnEl, source) {
+    const apiKey = getKey();
+    if (!apiKey) return setStatus('Add your Karvision Key above first.', 0, true);
+    if (!prompt) return setStatus('Describe the model first.', 0, true);
+
+    if (btnEl) btnEl.disabled = true;
+    setStatus('Sending prompt (preview stage)…', 4);
+
+    try {
+      // Text-to-3D is a two-stage flow: "preview" (geometry) then "refine"
+      // (adds texture). We request preview then immediately refine once the
+      // preview succeeds, so the panel always returns one final textured GLB.
+      const previewRes = await fetch(`${BASE}/openapi/v2/text-to-3d`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode:            'preview',
+          prompt:          prompt,
+          art_style:       artStyle,
+          should_remesh:   false,
+          target_formats:  ['glb'],
+        }),
+      });
+      const previewCreated = await previewRes.json();
+      if (!previewRes.ok) throw new Error(previewCreated.message || `HTTP ${previewRes.status}`);
+
+      setStatus('Generating preview geometry…', 8);
+      const previewTask = await pollTask('text-to-3d', previewCreated.result, apiKey);
+      if (!previewTask) { if (btnEl) btnEl.disabled = false; return; }
+
+      setStatus('Preview ready — refining with texture…', 55);
+      const refineRes = await fetch(`${BASE}/openapi/v2/text-to-3d`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode:            'refine',
+          preview_task_id: previewCreated.result,
+          enable_pbr:      artStyle !== 'sculpture',
+          target_formats:  ['glb'],
+        }),
+      });
+      const refineCreated = await refineRes.json();
+      if (!refineRes.ok) throw new Error(refineCreated.message || `HTTP ${refineRes.status}`);
+
+      const refineTask = await pollTask('text-to-3d', refineCreated.result, apiKey);
+      if (refineTask && refineTask.model_urls && refineTask.model_urls.glb) {
+        await loadGLBIntoScene(refineTask.model_urls.glb, { source: source || 'prompt', thumbnail: refineTask.thumbnail_url });
+      }
+    } catch (e) {
+      setStatus('Text-to-3D failed: ' + e.message, 0, true);
+      addLog('err', '[AI-Model] text-to-3d failed: ' + e.message);
+    } finally {
+      if (btnEl) btnEl.disabled = false;
+    }
+  }
+
+  // Prompt-tab button — reads the free-text prompt + art style dropdown.
+  function generateFromPrompt() {
+    const prompt   = document.getElementById('meshy-prompt').value.trim();
+    const artStyle = document.getElementById('meshy-art-style').value;
+    const btn      = document.getElementById('meshy-gen-prompt-btn');
+    return runTextTo3D(prompt, artStyle, btn, 'prompt');
+  }
+
+  // ── SYNC — builds a prompt directly from the current BIM parameter
+  // sliders (Floors / Wing Span / Floor H / Depth / Rotation) and
+  // regenerates the AI model to match, so slider tweaks can be folded
+  // back into a fresh AI-generated model on demand.
+  function buildPromptFromParams() {
+    const floors = document.getElementById('sl-floors').value;
+    const span   = document.getElementById('sl-span').value;
+    const height = document.getElementById('sl-height').value;
+    const depth  = document.getElementById('sl-depth').value;
+    const rot    = document.getElementById('sl-rot').value;
+    return `an architectural building massing with ${floors} floors, ` +
+           `${parseFloat(height).toFixed(1)}m floor height, ` +
+           `${parseFloat(span).toFixed(1)}x wing span, ` +
+           `${depth}m depth, rotated ${rot} degrees, ` +
+           `clean engineering elevation drawing style, flat roof, orthogonal massing`;
+  }
+  function syncFromParams() {
+    const prompt = buildPromptFromParams();
+    const btn    = document.getElementById('bim-sync-btn');
+    addLog('ok', `[AI-Model] SYNC prompt: "${prompt}"`);
+    return runTextTo3D(prompt, 'realistic', btn, 'sync');
+  }
+
+  // ── Load the resulting GLB into the existing Three.js scene ──────────
+  // Parented under window.meshyGroup so the animate() render loop applies
+  // the SAME gesture-driven rotation/scale it already applies to bimGroup.
+  function loadGLBIntoScene(glbUrl, meta) {
+    return new Promise((resolve) => {
+      if (typeof THREE.GLTFLoader === 'undefined') {
+        setStatus('GLTFLoader not available — check network/script tags.', 0, true);
+        return resolve(null);
+      }
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        glbUrl,
+        (gltf) => {
+          // Remove any previously loaded Meshy model before adding the new one
+          if (window.meshyGroup) { scene.remove(window.meshyGroup); window.meshyGroup = null; }
+
+          const group = new THREE.Group();
+          group.add(gltf.scene);
+
+          // Normalise scale/position: fit the generated model into roughly
+          // the same footprint as a default BIM block, centred at origin.
+          const box    = new THREE.Box3().setFromObject(gltf.scene);
+          const size   = new THREE.Vector3(); box.getSize(size);
+          const center = new THREE.Vector3(); box.getCenter(center);
+          gltf.scene.position.sub(center); // center the mesh at local origin
+          const maxDim   = Math.max(size.x, size.y, size.z) || 1;
+          const baseScale = 8 / maxDim; // ~8-unit footprint, matches BIM scale
+
+          group.userData.baseScale = baseScale;
+          group.userData.baseRotY  = 0;
+          group.scale.set(baseScale, baseScale, baseScale);
+
+          document.getElementById('welcome').style.display = 'none';
+          if (typeof OrbCanvas !== 'undefined') OrbCanvas.stop();
+
+          // Reset gesture physics so the new model starts at rest, matching
+          // buildBIM()'s behaviour when a fresh model is loaded.
+          window._objRotY = 0; window._objRotX = 0; window._objScale = 1.0;
+          window._objOmegaY = 0; window._objOmegaX = 0; window._objDScale = 0;
+          window._objStopped = false;
+
+          window.meshyGroup = group;
+          scene.add(group);
+
+          setStatus(`Loaded (${meta.source}) — drag/gesture to rotate, pinch/scroll to zoom.`, 100);
+          addLog('ok', `[AI-Model] GLB loaded from ${meta.source} input — fitted to scale ${baseScale.toFixed(3)}`);
+          resolve(group);
+        },
+        undefined,
+        (err) => {
+          setStatus('Failed to load GLB into scene: ' + (err.message || err), 0, true);
+          addLog('err', '[AI-Model] GLTFLoader error: ' + (err.message || err));
+          resolve(null);
+        }
+      );
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSavedKeyHint);
+
+  return { saveKey, setTab, onFileChosen, onDrop, generateFromImage, generateFromPrompt, syncFromParams };
+})();
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 // ── GestureCast: throttled real-time transform broadcast ─────────────────
@@ -3036,6 +3559,7 @@ function exportView(){
 
 function resetScene(){
   if(bimGroup){ scene.remove(bimGroup); bimGroup=null; }
+  if(window.meshyGroup){ scene.remove(window.meshyGroup); window.meshyGroup=null; }
   document.getElementById('welcome').style.display='flex';
   document.getElementById('holo-ghost').classList.remove('fade');
   ['m-floors','m-cols','m-gfa','m-vol','m-height','m-faces','m-verts','m-fps'].forEach(id=>{
@@ -5401,51 +5925,26 @@ function drawMeshAttention(lms, attnW, ctx, W, H) {
     ctx.stroke();
   }
 
-  // Draw nodes, size ∝ attention weight
+  // Draw joint nodes as red connector dots, size ∝ attention weight
   for (let i = 0; i < 21; i++) {
     const w   = attnW[Math.min(i, attnW.length-1)] / maxW;
     const r   = 2 + w * 4;
     const isTip = [4,8,12,16,20].includes(i);
     ctx.beginPath();
-    ctx.arc(lms[i].x * W, lms[i].y * H, r, 0, Math.PI*2);
+    ctx.arc(lms[i].x * W, lms[i].y * H, isTip ? r + 1.2 : r, 0, Math.PI*2);
     ctx.fillStyle = isTip
-      ? `rgba(0,${200+Math.round(w*55)},${Math.round(w*200)},0.95)`
-      : `rgba(0,${150+Math.round(w*80)},${180+Math.round(w*50)},0.7)`;
+      ? `rgba(255,${40+Math.round(w*30)},${60+Math.round(w*30)},0.98)`
+      : `rgba(240,${20+Math.round(w*40)},${50+Math.round(w*30)},0.85)`;
+    ctx.shadowColor = 'rgba(255,40,60,0.85)';
+    ctx.shadowBlur  = isTip ? 6 : 3;
     ctx.fill();
+    ctx.shadowBlur  = 0;
   }
 }
 
-/** Render temporal attention weight bar chart in bottom strip of PiP */
-function renderAttnWeights(attnW, gate) {
-  const gc  = document.getElementById('gesture-canvas');
-  const gv  = document.getElementById('gesture-video');
-  if (!gc || !gv || gv.readyState < 2) return;
-
-  const W = gv.videoWidth  || 160;
-  const H = gv.videoHeight || 120;
-  const T = attnW.length;
-
-  // Draw small bar chart at bottom of canvas
-  const barH   = 14;
-  const barY   = H - barH - 2;
-  const barW   = Math.floor(W / T);
-  const maxW   = Math.max(...attnW, 1e-4);
-  const ctx    = gc.getContext('2d');
-
-  ctx.fillStyle = 'rgba(4,5,13,0.6)';
-  ctx.fillRect(0, barY - 2, W, barH + 4);
-
-  for (let t = 0; t < T; t++) {
-    const h  = Math.max(1, Math.round((attnW[t] / maxW) * barH));
-    const hue= Math.round(170 + (attnW[t]/maxW) * 60);
-    ctx.fillStyle = `hsla(${hue},80%,55%,0.85)`;
-    ctx.fillRect(t * barW, barY + barH - h, barW - 1, h);
-  }
-
-  // Gate confidence bar
-  ctx.fillStyle = `rgba(0,${Math.round(gate*232)},${Math.round(gate*152)},0.7)`;
-  ctx.fillRect(0, barY - 3, Math.round(gate * W), 2);
-}
+/** No-op: the corner-PiP attention bar chart was removed along with the
+ *  PiP box itself. Kept as a stub so existing callers don't need changes. */
+function renderAttnWeights(attnW, gate) { /* corner PiP removed */ }
 
 // ── ENGINE STATE ──────────────────────────────────────────────────────────
 const GE = {
@@ -5610,17 +6109,19 @@ function onMPHandsResults(results) {
     filtH1 = GEv16.applyAKF(filt1e1, GEv16.akfBank1);
   }
 
-  // ── DRAW LANDMARKS ─────────────────────────────────────────────────
+  // ── DRAW LANDMARKS — full-frame overlay on the main viewport ────────
   if (gestureState.drawLandmarks) {
-    const gc = document.getElementById('gesture-canvas');
-    const gv = document.getElementById('gesture-video');
-    const ptzPip = GE._ptzPipImg;
-    gc.width  = (ptzPip && ptzPip.naturalWidth)  ? 320 : (gv.videoWidth  || 320);
-    gc.height = (ptzPip && ptzPip.naturalHeight) ? 240 : (gv.videoHeight || 240);
-    const ctx = gc.getContext('2d');
-    ctx.clearRect(0, 0, gc.width, gc.height);
-    drawMeshAttention(filtH0, new Float32Array(21).fill(0.5), ctx, gc.width, gc.height);
-    if (filtH1) drawMeshAttention(filtH1, new Float32Array(21).fill(0.3), ctx, gc.width, gc.height);
+    const gc = document.getElementById('gesture-canvas-main');
+    if (gc) {
+      const viewport = document.getElementById('viewport');
+      const vw = viewport ? viewport.clientWidth  : (gc.parentElement ? gc.parentElement.clientWidth  : 320);
+      const vh = viewport ? viewport.clientHeight : (gc.parentElement ? gc.parentElement.clientHeight : 240);
+      if (gc.width !== vw || gc.height !== vh) { gc.width = vw; gc.height = vh; }
+      const ctx = gc.getContext('2d');
+      ctx.clearRect(0, 0, gc.width, gc.height);
+      drawMeshAttention(filtH0, new Float32Array(21).fill(0.5), ctx, gc.width, gc.height);
+      if (filtH1) drawMeshAttention(filtH1, new Float32Array(21).fill(0.3), ctx, gc.width, gc.height);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -6199,8 +6700,11 @@ async function startGestureEngine() {
     }
   }
 
-  if (document.getElementById('t-pip').classList.contains('on'))
-    document.getElementById('gesture-pip').classList.add('visible');
+  if (document.getElementById('t-pip').classList.contains('on')) {
+    gestureState.drawLandmarks = true;
+    const overlay = document.getElementById('gesture-canvas-main');
+    if (overlay) overlay.style.display = '';
+  }
 
   // ── Initialise @mediapipe/hands (collidingScopes API) ───────────────────
   // window.Hands is the patched constructor — locateFile is injected automatically
@@ -6261,9 +6765,8 @@ function stopGestureEngine() {
   }
   GE._ptzImg = null;
   WipeDetector.reset();
-  const gc = document.getElementById('gesture-canvas');
-  gc.getContext('2d').clearRect(0, 0, gc.width, gc.height);
-  document.getElementById('gesture-pip').classList.remove('visible');
+  const gcMain = document.getElementById('gesture-canvas-main');
+  if (gcMain) gcMain.getContext('2d').clearRect(0, 0, gcMain.width, gcMain.height);
   document.getElementById('gesture-pill-text').textContent = 'GESTURE ENGINE OFFLINE';
   document.getElementById('gesture-led').className = '';
   document.getElementById('gesture-pill').classList.remove('active');
@@ -6444,17 +6947,217 @@ function toggleGestureSource() {
   }
 }
 
+// Corner PiP box removed — this now toggles the full-frame landmark
+// overlay drawn directly on the main viewport (#gesture-canvas-main).
 function togglePiP(el) {
   el.classList.toggle('on');
-  const pip = document.getElementById('gesture-pip');
   const isOn = el.classList.contains('on');
-  if (isOn && GE.running) pip.classList.add('visible');
-  else pip.classList.remove('visible');
+  gestureState.drawLandmarks = isOn;
+
+  const overlay = document.getElementById('gesture-canvas-main');
+  if (overlay) {
+    overlay.style.display = isOn ? '' : 'none';
+    if (!isOn) overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+  }
 
   const btn = document.getElementById('pip-toggle-btn');
   if (btn) {
-    btn.textContent = isOn ? '◈ HIDE GESTURE PREVIEW' : '◈ SHOW GESTURE PREVIEW';
+    btn.textContent = isOn ? '◈ HIDE GESTURE OVERLAY' : '◈ SHOW GESTURE OVERLAY';
     btn.classList.toggle('active', isOn);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RELAY GESTURE CHANNEL — consumes the Python tracker's fused SO(3)
+// quaternion + finger-curl + gesture-class JSON via the HF Space relay
+// (/ws/gview), instead of running a second, coarser MediaPipe pass in the
+// browser. This is a data source, not a video source: it does NOT touch
+// startGestureEngine()'s webcam/PTZ frame acquisition at all — it drives
+// the same downstream state (window._objOmegaX/Y, window._objDScale, the
+// BIM param sliders) that the local engine's own handlers already write
+// to (see applyWipeCamera / the 2-hand-zoom handler above). Relay-driven
+// and local in-browser control both write that same state, so running
+// both at once means two sources fighting over one frame's rotation —
+// toggleRelayGesture() stops the local engine first, same as
+// toggleGestureSource() already does when switching input source.
+// ═══════════════════════════════════════════════════════════════════════════
+
+window._relayGesture = {
+  enabled: false,
+  ws: null,
+  reconnectTimer: null,
+  paramFrameCounter: 0,   // throttles slider-driven BIM rebuilds
+  prevPinch: {},          // per-hand previous pinch_dist, for zoom delta
+};
+
+function _relayGestureBase() {
+  var url = window.GE_PTZ_URL;
+  if (!url) return null;
+  try {
+    var u = new URL(url, location.href);
+    return u.protocol + '//' + u.host;
+  } catch (e) {
+    return null;
+  }
+}
+
+function connectGestureRelay() {
+  var base = _relayGestureBase();
+  if (!base) {
+    addLog('err', '[RELAY-GESTURE] No relay base — set GE_PTZ_URL / ?ptz= first.');
+    return;
+  }
+  var wsUrl = base.replace(/^http/, 'ws') + '/ws/gview';
+
+  var rg = window._relayGesture;
+  if (rg.ws) { try { rg.ws.close(); } catch (e) {} }
+
+  var ws = new WebSocket(wsUrl);
+  rg.ws = ws;
+
+  ws.onopen = () => addLog('ok', `[RELAY-GESTURE] Connected (${wsUrl})`);
+  ws.onmessage = (ev) => {
+    if (!window._relayGesture.enabled) return; // ignore stray messages after user disables
+    try {
+      applyRemoteGestureFrame(JSON.parse(ev.data));
+    } catch (e) {
+      addLog('warn', `[RELAY-GESTURE] Bad payload: ${e}`);
+    }
+  };
+  ws.onclose = () => {
+    addLog('warn', '[RELAY-GESTURE] Channel closed.');
+    if (window._relayGesture.enabled) {
+      // Auto-retry while the user still wants relay control, mirroring the
+      // video pusher's own reconnect behaviour — a transient relay drop
+      // shouldn't require the user to notice and manually re-toggle.
+      window._relayGesture.reconnectTimer = setTimeout(connectGestureRelay, 2000);
+    }
+  };
+  ws.onerror = () => { /* onclose fires right after; handled there */ };
+}
+
+function disconnectGestureRelay() {
+  var rg = window._relayGesture;
+  if (rg.reconnectTimer) { clearTimeout(rg.reconnectTimer); rg.reconnectTimer = null; }
+  if (rg.ws) { try { rg.ws.close(); } catch (e) {} rg.ws = null; }
+}
+
+function toggleRelayGesture() {
+  const btn = document.getElementById('relay-gesture-btn');
+  const rg = window._relayGesture;
+
+  if (rg.enabled) {
+    rg.enabled = false;
+    disconnectGestureRelay();
+    btn.textContent = '◈ RELAY GESTURE: OFF';
+    btn.classList.remove('active');
+    setGestureLED('on');
+    addLog('ok', '[RELAY-GESTURE] Disabled.');
+  } else {
+    if (GE.running) {
+      stopGestureEngine();
+      document.getElementById('gesture-toggle-btn').textContent = '◈ GESTURE CONTROL: OFF';
+      document.getElementById('gesture-toggle-btn').classList.remove('active');
+    }
+    rg.enabled = true;
+    rg.paramFrameCounter = 0;
+    rg.prevPinch = {};
+    btn.textContent = '◈ RELAY GESTURE: ON';
+    btn.classList.add('active');
+    setGestureLED('tracking');
+    addLog('ok', '[RELAY-GESTURE] Enabled — connecting…');
+    connectGestureRelay();
+  }
+}
+
+// ── Rule table: Python-tracked gesture -> BIM / rotation modification ─────
+// Writes to the SAME state the local FIST-rotate / 2-hand-zoom handlers
+// use (window._objOmegaX/Y, window._objDScale), so animate()'s existing
+// damped-integration loop (β≈0.96, see applyWipeCamera above) picks these
+// up with zero further changes on that side.
+function applyRemoteGestureFrame(payload) {
+  const hands = payload.hands || [];
+  if (hands.length === 0) return;
+
+  window._relayGesture.paramFrameCounter++;
+  // Slider-driven BIM rebuilds (updateParam on floors/span/height/depth/rot)
+  // trigger a full buildBIM() — expensive at relay rate (~30Hz). Throttle
+  // those to ~10Hz; the rotation/zoom impulses below stay at full rate
+  // since they're cheap additive nudges, not rebuilds.
+  const doParamUpdate = (window._relayGesture.paramFrameCounter % 3 === 0);
+
+  for (const h of hands) {
+    switch (h.gesture) {
+
+      case 'FIST': {
+        // Continuous wrist-delta drag — same role as the local drag
+        // handler (window._objOmegaY += dxM * 0.004, above) but fed by
+        // the Python tracker's already-smoothed delta.
+        window._objStopped = false;
+        window._lastInteractMs = performance.now();
+        window._objOmegaY += (h.delta.dx || 0) * 0.05;
+        window._objOmegaX += (h.delta.dy || 0) * 0.05;
+        setGestureLED('active-move');
+        break;
+      }
+
+      case 'PINCH': {
+        // Pinch distance -> zoom, same ΔS-into-_objDScale physics as the
+        // existing 2-hand zoom handler (K_ZOOM=1.5, above), but usable
+        // one-handed since the tracker isolates pinch_dist directly
+        // instead of needing two tracked wrists.
+        const prev = window._relayGesture.prevPinch[h.hand];
+        if (prev != null) {
+          const delta = h.pinch_dist - prev; // opening = positive = zoom out
+          window._objDScale += delta * 1.5;  // same K_ZOOM gain as 2-hand zoom
+        }
+        window._relayGesture.prevPinch[h.hand] = h.pinch_dist;
+        setGestureLED('active-move');
+        break;
+      }
+
+      case 'TAP': {
+        // dz-velocity spike = discrete commit gesture. Logged only by
+        // default — bind to whatever "confirm" action fits your workflow
+        // (e.g. startCalibration()) rather than assuming one here.
+        addLog('ok', `[RELAY-GESTURE] TAP (${h.hand})`);
+        break;
+      }
+
+      case 'OPEN':
+      case 'POINT':
+      case 'OTHER':
+      default: {
+        // Flat/tracked palm, no discrete gesture this frame: use the
+        // continuous SO(3) orientation the local browser engine never
+        // had. Yaw component of the fused quaternion drives the
+        // Rotation slider directly — needs the Python-side Kabsch +
+        // anatomical-basis fusion, not reachable from wrist position alone.
+        if (doParamUpdate && h.orientation && h.orientation.euler_deg_xyz) {
+          const yawRaw = h.orientation.euler_deg_xyz[1]; // [pitch, yaw, roll]
+          const yaw = ((yawRaw % 360) + 360) % 360;
+          const slRot = document.getElementById('sl-rot');
+          const clamped = Math.max(+slRot.min, Math.min(+slRot.max, yaw));
+          slRot.value = clamped;
+          updateParam('rot', clamped);
+        }
+
+        // Index-finger PIP flexion -> Wing Span, a continuous analog
+        // control the discrete FIST/OPEN classifier alone can't drive.
+        // fingers_curl_deg.index = [angle_at_PIP, angle_at_DIP] (see
+        // finger_curl_angles / FINGER_CHAINS in the tracker); PIP (index
+        // 0) is the dominant flexion joint for "how curled is this finger".
+        if (doParamUpdate && h.fingers_curl_deg && h.fingers_curl_deg.index) {
+          const curlPip = h.fingers_curl_deg.index[0] ?? 0; // deg, ~0 straight .. ~90+ curled
+          const slSpan = document.getElementById('sl-span');
+          const spanMin = +slSpan.min, spanMax = +slSpan.max;
+          const t = Math.max(0, Math.min(1, curlPip / 90));
+          const span = spanMax - t * (spanMax - spanMin); // straight->max span, curled->min span
+          slSpan.value = span.toFixed(1);
+          updateParam('span', span);
+        }
+      }
+    }
   }
 }
 
@@ -7025,6 +7728,23 @@ window.iconScrollTo = function(el, side) {
           setStatus('PUSHER: CONNECTED (' + Number(j.last_frame_age_s).toFixed(1) + 's)' + depthTxt, true);
         } else {
           setStatus('PUSHER: OFFLINE' + depthTxt, false);
+        }
+
+        // Gesture-channel health, alongside the video pusher's own badge.
+        // If relay-driven control is ON but the tracker's gesture pusher
+        // has gone stale, don't leave the model silently frozen mid-air —
+        // warn once and drop back to local in-browser MediaPipe control
+        // automatically, same "never leave the user stuck" principle the
+        // video side already follows via PUSHER: OFFLINE.
+        if (window._relayGesture && window._relayGesture.enabled && !j.gesture_pusher_connected) {
+          if (!window._relayGesture._staleWarned) {
+            window._relayGesture._staleWarned = true;
+            addLog('warn', '[RELAY-GESTURE] Tracker gesture feed stale — falling back to local MediaPipe.');
+            toggleRelayGesture();       // turns relay control OFF
+            toggleGestureEngine();      // turns local in-browser engine ON
+          }
+        } else if (window._relayGesture) {
+          window._relayGesture._staleWarned = false;
         }
       })
       .catch(function () {
