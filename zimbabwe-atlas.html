@@ -261,6 +261,10 @@ body{
         <button id="mode-3d" class="btn small active">Bird's eye</button>
         <button id="mode-2d" class="btn small">Flat map</button>
       </div>
+      <div id="peg-row" style="display:none;margin-top:8px">
+        <button id="peg-coverage" type="button" class="btn small">◐ Show imagery coverage</button>
+      </div>
+      <div class="custom-note" id="peg-note" style="display:none">Drag the pegman (bottom-right of the flat map) onto a blue-highlighted street to drop in — it teleports the 3D camera to ground level at that spot.</div>
     </div>
 
     <div class="panel-block">
@@ -332,6 +336,8 @@ body{
       const { Map3DElement } = await google.maps.importLibrary('maps3d');
       const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
       await google.maps.importLibrary('geometry');
+      const { StreetViewCoverageLayer } = await google.maps.importLibrary('streetView');
+      state.svCoverageLayer = new StreetViewCoverageLayer();
 
       state.map3d = $('map3d');
       buildPlaceList();
@@ -455,7 +461,9 @@ body{
         zoom: 6,
         mapTypeId: 'hybrid',
         disableDefaultUI: false,
-        styles: MAP_STYLE_2D
+        styles: MAP_STYLE_2D,
+        streetViewControl: true,
+        streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
       });
       PLACES.forEach((p) => {
         const marker = new google.maps.Marker({
@@ -469,8 +477,52 @@ body{
           flyTo(p, item);
         });
       });
+      setupPegman();
     }
-    setStatus(mode === '3d' ? "Bird's-eye 3D mode." : 'Flat map mode.');
+    $('peg-row').style.display = mode === '2d' ? 'block' : 'none';
+    $('peg-note').style.display = mode === '2d' ? 'block' : 'none';
+    setStatus(mode === '3d' ? "Bird's-eye 3D mode." : 'Flat map mode — drag the pegman to teleport into 3D.');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PEGMAN → 3D TELEPORT
+  // The flat map's native Pegman control already knows exactly where
+  // imagery exists (it draws the blue streets as you drag it) — we don't
+  // need to reinvent that. We just intercept the drop: grab the pegman's
+  // panorama position, immediately hide the flat photo panorama, and fly
+  // the photorealistic 3D camera down to a tight, ground-level shot at
+  // that exact point instead. "Show imagery coverage" toggles the same
+  // blue coverage layer on the map full-time, without needing to drag.
+  // ═══════════════════════════════════════════════════════════════════
+  function setupPegman(){
+    const panorama = state.map2d.getStreetView();
+    panorama.addListener('visible_changed', () => {
+      if(!panorama.getVisible()) return;
+      const pos = panorama.getPosition();
+      panorama.setVisible(false); // we use it as a coverage-aware picker only
+      if(pos) groundTeleport(pos.lat(), pos.lng());
+    });
+
+    $('peg-coverage').addEventListener('click', () => {
+      const showing = state.svCoverageLayer.getMap() === state.map2d;
+      state.svCoverageLayer.setMap(showing ? null : state.map2d);
+      $('peg-coverage').classList.toggle('active', !showing);
+      $('peg-coverage').textContent = showing ? '◐ Show imagery coverage' : '◑ Hide imagery coverage';
+    });
+  }
+
+  function groundTeleport(lat, lng){
+    switchMode('3d');
+    state.active = { name: 'Dropped pin', desc: 'Pegman drop — ground-level teleport', lat, lng, range: 120, tilt: 82 };
+    state.map3d.flyCameraTo({
+      endCamera: { center: { lat, lng, altitude: 2 }, tilt: 82, range: 120, heading: 0 },
+      durationMillis: 2200
+    });
+    $('tilt-slider').value = 82; $('tilt-val').textContent = 82;
+    $('range-slider').value = 300; $('range-val').textContent = fmtRange(300);
+    $('hud').innerHTML = `<b>Ground-level drop</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    $('capture-btn').disabled = false;
+    setStatus('Teleported into 3D at the dropped pin.');
   }
 
   function setupCamControls(){
