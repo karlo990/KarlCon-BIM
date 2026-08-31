@@ -3701,7 +3701,9 @@ function updateParam(name, val){
   const id = 'v-'+name;
   if(document.getElementById(id))
     document.getElementById(id).textContent = disp[name] ? disp[name](val) : parseFloat(val).toFixed(name==='floors'?0:2);
-  if(bimGroup && (name==='floors'||name==='span'||name==='height'||name==='depth'||name==='rot')){
+  // FIX: removed `if(bimGroup)` guard — sliders now rebuild from cold start.
+  // Boot sets bimGroup via the default buildBIM() call, so this is always safe.
+  if(name==='floors'||name==='span'||name==='height'||name==='depth'||name==='rot'){
     buildBIM(Object.assign({
       floor_count: parseInt(document.getElementById('sl-floors').value),
       floor_height: parseFloat(document.getElementById('sl-height').value),
@@ -7421,14 +7423,30 @@ async function triggerBIM() {
 // ── Boot ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', ()=>{
   initThree();
+
+  // ── DEFAULT BIM: render immediately on load without requiring backend ──────
+  // bimGroup starts null, so sliders and setMode() are inert until this runs.
+  // REST/WS geometry from the backend will call buildBIM() again and replace
+  // this default — no other changes needed when the backend connects.
+  buildBIM({
+    floor_count:  params.floors,       // 3
+    floor_height: params.height,       // 3.0 m
+    wing_span:    params.span * 4,     // 8.0 m
+    depth:        params.depth,        // 10 m
+    rot:          params.rot,          // 30°
+    confidence:   0.5,
+    holo_colour:  '#a855f7'
+  });
+  addLog('ok', 'Default BIM rendered · connect backend to stream live geometry');
+
   GE.classifier.loadPrototypes();   // restore persisted calibration from localStorage
-  startSyncPoller();                // begin /model/pipeline REST polling (3s, ETag-gated)
+  startSyncPoller();                // begin /model/pipeline REST polling (500ms, ETag-gated)
   addLog('ok','KarlCON BIM v18.0 · GE-v16 · 2-HAND ZOOM · FIST ROTATE · PURE GEOMETRY ENGINE');
   addLog('SYS','[GE-v16] ✊ FIST = rotate (wrist delta → ωY/ωX) · ◉◉ 2-HAND SPREAD = zoom in/out');
   addLog('SYS','[GE-v16] Pure geometry: no classifier · 1€-filter+EMA · fist-lock N=3 frames · dead-band 0.003');
   addLog('SYS','[GE-v16] Ref: collidingScopes/3D-editor · Zhang 2020 lm topology · Goldstein CM §4.9 · Casiez CHI 2012');
   addLog('SYS','[NanoMorph] N=800 nanoparticles · Bhattacharya 2016 Langevin SDE · TWEEN.js quintic easing');
-  addLog('SYS','Upload image and connect WebSocket to begin BIM decode');
+  addLog('SYS','Connect WebSocket + upload image to stream live BIM decode');
 });
 
 // ── Cleanup on navigate-away / reload ──────────────────────────────────────
