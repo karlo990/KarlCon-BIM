@@ -1887,6 +1887,23 @@ body::before{display:none;}
      (see below) so pages that never enable depth pay zero network cost. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.19.2/ort.min.js"></script>
 <script>
+  // onnxruntime-web config — must run before any InferenceSession is created.
+  // cdnjs's mirror of onnxruntime-web is missing some of the .wasm/.mjs
+  // sibling files ort.min.js auto-resolves next to itself, so the fetch was
+  // coming back as an HTML 404 page — which is why WebAssembly.compile()
+  // failed with "expected 4 bytes, fell off end @0" (an HTML response isn't
+  // a wasm binary). jsdelivr mirrors the full npm package tree reliably.
+  // Also force single-threaded WASM: the threaded build needs
+  // Cross-Origin-Opener-Policy / Cross-Origin-Embedder-Policy response
+  // headers (for SharedArrayBuffer) that this static Vercel deployment
+  // doesn't set, so the threaded variant would fail the same way even with
+  // a correct wasmPaths.
+  if (typeof ort !== 'undefined') {
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
+    ort.env.wasm.numThreads = 1;
+  }
+</script>
+<script>
 // ─── KarvisionDepth — live relay frame -> BIM background compositor ───────────
 // Turns each JPEG bitmap arriving over /ws/view into:
 //   (a) a full-rate THREE.CanvasTexture (colour), and
