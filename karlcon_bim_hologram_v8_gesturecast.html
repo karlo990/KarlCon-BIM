@@ -12,33 +12,33 @@
 
 /* ══════════════════════════════════════════════════
    KARLCON DESIGN SYSTEM — sourced from index.html
-   Primary: #0fd8ec (cyan)  |  BG: #080910
+   Primary: #a855f7 (cyan)  |  BG: #080910
    Font: JetBrains Mono (monospace only — matches index)
    All colours, radii, shadows identical to index.html
 ══════════════════════════════════════════════════ */
 :root {
   /* ── Core palette ── */
-  --c:    #0fd8ec;
-  --c2:   #3bbdd0;
-  --c3:   #00f0d4;
+  --c:    #a855f7;
+  --c2:   #c9a0ff;
+  --c3:   #e879f9;
   --gold: #d4aa3c;
   --red:  #f04460;
   --green:#00e898;
   --amber:#e87a44;
-  --bg:   #070910;
-  --bg2:  #06070d;
-  --panel:rgba(9,11,21,0.92);
+  --bg:   #ffffff;
+  --bg2:  #f4f2fa;
+  --panel:rgba(244,242,250,0.92);
 
   /* ── Glass surface tokens ── */
   --glass-bg:     rgba(12,16,28,0.72);
-  --glass-border: rgba(0,210,230,0.13);
-  --glass-glow:   rgba(0,210,230,0.06);
+  --glass-border: rgba(168,85,247,0.13);
+  --glass-glow:   rgba(168,85,247,0.06);
   --glass-shine:  rgba(255,255,255,0.04);
 
   /* ── Borders & glows ── */
-  --bdr:  rgba(0,210,230,.10);
-  --bdr2: rgba(0,210,230,.22);
-  --glow: 0 0 24px rgba(0,210,230,.16), 0 0 8px rgba(0,210,230,.08);
+  --bdr:  rgba(168,85,247,.10);
+  --bdr2: rgba(168,85,247,.22);
+  --glow: 0 0 24px rgba(168,85,247,.16), 0 0 8px rgba(168,85,247,.08);
 
   /* ── Curved radii system ── */
   --r1:   10px;
@@ -65,28 +65,7 @@ body{
 }
 
 /* ── subtle star field (exact from index.html) ── */
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:
-    radial-gradient(1px 1px at 12% 18%,rgba(140,210,255,.45) 0%,transparent 100%),
-    radial-gradient(1px 1px at 78%  9%,rgba(160,220,255,.50) 0%,transparent 100%),
-    radial-gradient(1px 1px at 45% 72%,rgba(150,210,255,.40) 0%,transparent 100%),
-    radial-gradient(1.5px 1.5px at 91% 55%,rgba(130,200,255,.55) 0%,transparent 100%),
-    radial-gradient(1px 1px at 30% 40%,rgba(170,215,255,.38) 0%,transparent 100%),
-    radial-gradient(1px 1px at 63% 28%,rgba(190,225,255,.45) 0%,transparent 100%),
-    radial-gradient(1px 1px at 5%  85%,rgba(155,205,255,.42) 0%,transparent 100%),
-    radial-gradient(1px 1px at 55% 92%,rgba(135,190,255,.48) 0%,transparent 100%),
-    radial-gradient(1px 1px at 82% 76%,rgba(170,215,255,.38) 0%,transparent 100%),
-    radial-gradient(1px 1px at 20% 60%,rgba(148,205,255,.46) 0%,transparent 100%),
-    radial-gradient(1px 1px at 70% 45%,rgba(180,220,255,.36) 0%,transparent 100%),
-    radial-gradient(1.5px 1.5px at 38% 15%,rgba(210,235,255,.55) 0%,transparent 100%),
-    radial-gradient(1px 1px at 88% 32%,rgba(152,208,255,.42) 0%,transparent 100%),
-    radial-gradient(1px 1px at 15% 50%,rgba(170,218,255,.40) 0%,transparent 100%),
-    radial-gradient(1px 1px at 50%  5%,rgba(200,235,255,.50) 0%,transparent 100%),
-    radial-gradient(1px 1px at 95% 88%,rgba(162,208,255,.42) 0%,transparent 100%),
-    radial-gradient(1px 1px at 25% 95%,rgba(190,228,255,.46) 0%,transparent 100%),
-    radial-gradient(1px 1px at 67% 62%,rgba(172,218,255,.38) 0%,transparent 100%);
-}
+body::before{display:none;}
 
 #constellation-canvas{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5}
 
@@ -98,12 +77,12 @@ body::before{
   position:fixed;top:0;left:0;right:0;
   height:48px;
   background:linear-gradient(135deg,rgba(10,14,26,0.96) 0%,rgba(8,11,22,0.98) 100%);
-  border-bottom:1px solid rgba(0,210,230,0.10);
+  border-bottom:1px solid rgba(168,85,247,0.10);
   display:flex;align-items:center;gap:16px;
   padding:0 20px;z-index:200;
   box-shadow:0 4px 40px rgba(0,0,0,0.6),
              0 1px 0 rgba(255,255,255,0.03),
-             inset 0 1px 0 rgba(0,210,230,0.05);
+             inset 0 1px 0 rgba(168,85,247,0.05);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
 }
@@ -115,7 +94,7 @@ body::before{
 }
 .ticker-inner{
   font-family:var(--fm);font-size:8px;letter-spacing:1px;
-  color:rgba(0,210,230,.28);
+  color:rgba(168,85,247,0.55);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   width:100%;
 }
@@ -123,8 +102,8 @@ body::before{
 #logo-wordmark{
   font-family:'Space Grotesk','JetBrains Mono',monospace;
   font-size:16px;font-weight:400;letter-spacing:5px;
-  text-transform:uppercase;color:#0fd8ec;
-  text-shadow:0 0 18px rgba(0,210,230,.4),0 0 36px rgba(0,160,200,.14);
+  text-transform:uppercase;color:#a855f7;
+  text-shadow:0 0 18px rgba(168,85,247,.4),0 0 36px rgba(0,160,200,.14);
   white-space:nowrap;flex-shrink:0;
 }
 #logo-wordmark .lw-mark{
@@ -136,20 +115,20 @@ body::before{
 #ws-pill{
   display:flex;align-items:center;gap:7px;
   background:rgba(0,0,0,.35);
-  border:1px solid rgba(0,210,230,.14);
+  border:1px solid rgba(168,85,247,.14);
   border-radius:var(--rpill);
   padding:6px 16px;
   font-family:var(--fm);font-size:9px;letter-spacing:1px;
-  color:rgba(0,210,230,.40);
+  color:rgba(168,85,247,0.55);
   flex-shrink:0;cursor:pointer;
   transition:all .25s;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
 #ws-pill:hover{
-  border-color:rgba(0,210,230,.35);
-  background:rgba(0,210,230,.06);
-  color:rgba(0,210,230,.75);
-  box-shadow:0 0 18px rgba(0,210,230,.12),inset 0 1px 0 rgba(255,255,255,.05);
+  border-color:rgba(168,85,247,0.55);
+  background:rgba(168,85,247,.06);
+  color:rgba(168,85,247,.75);
+  box-shadow:0 0 18px rgba(168,85,247,.12),inset 0 1px 0 rgba(255,255,255,.05);
 }
 
 #ws-dot{
@@ -167,9 +146,9 @@ body::before{
 /* ── CURVED BUTTONS ── */
 .btn-xs{
   padding:6px 14px;
-  background:rgba(0,210,230,.07);
-  border:1px solid rgba(0,210,230,.22);
-  color:rgba(0,210,230,.75);
+  background:rgba(168,85,247,.07);
+  border:1px solid rgba(168,85,247,.22);
+  color:rgba(168,85,247,.75);
   font-family:var(--fm);font-size:9px;letter-spacing:1.4px;
   cursor:pointer;
   border-radius:var(--rpill);
@@ -179,10 +158,10 @@ body::before{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
 .btn-xs:hover{
-  background:rgba(0,210,230,.16);
-  border-color:rgba(0,210,230,.50);
+  background:rgba(168,85,247,.16);
+  border-color:rgba(168,85,247,0.55);
   color:var(--c);
-  box-shadow:0 0 18px rgba(0,210,230,.18),inset 0 1px 0 rgba(255,255,255,.06);
+  box-shadow:0 0 18px rgba(168,85,247,.18),inset 0 1px 0 rgba(255,255,255,.06);
 }
 .btn-xs:active{transform:scale(.97)}
 
@@ -216,24 +195,24 @@ body::before{
 
 /* ── SIDE PANELS — index.html exact background ── */
 .side-panel{
-  background:linear-gradient(170deg,rgba(9,12,22,0.95) 0%,rgba(7,9,18,0.97) 100%);
-  border-right:1px solid rgba(0,210,230,0.08);
+  background:linear-gradient(170deg,rgba(255,255,255,0.97) 0%,rgba(248,246,252,0.98) 100%);
+  border-right:1px solid rgba(168,85,247,0.08);
   padding:10px 9px;
   overflow-y:auto;
   display:flex;flex-direction:column;gap:7px;
-  scrollbar-width:thin;scrollbar-color:rgba(0,210,230,.12) transparent;
+  scrollbar-width:thin;scrollbar-color:rgba(168,85,247,0.55) transparent;
   pointer-events:auto;
   backdrop-filter:blur(12px);
 }
-.side-panel.right{border-right:none;border-left:1px solid rgba(0,210,230,0.08)}
+.side-panel.right{border-right:none;border-left:1px solid rgba(168,85,247,0.08)}
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(0,210,230,.14);border-radius:100px}
+::-webkit-scrollbar-thumb{background:rgba(168,85,247,.14);border-radius:100px}
 
 /* ── PANEL BLOCKS — curved glass cards ── */
 .panel-block{
-  background:linear-gradient(145deg,rgba(0,210,230,.028) 0%,rgba(0,160,200,.012) 100%);
-  border:1px solid rgba(0,210,230,.10);
+  background:linear-gradient(145deg,rgba(168,85,247,.028) 0%,rgba(0,160,200,.012) 100%);
+  border:1px solid rgba(168,85,247,.10);
   border-radius:var(--r3);
   padding:12px 13px;
   position:relative;
@@ -245,12 +224,12 @@ body::before{
   content:'';position:absolute;
   top:0;left:20px;right:20px;height:1px;
   border-radius:100px;
-  background:linear-gradient(90deg,transparent,rgba(0,210,230,.18),transparent);
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.18),transparent);
 }
 .panel-block:hover{
-  border-color:rgba(0,210,230,.20);
-  background:linear-gradient(145deg,rgba(0,210,230,.04) 0%,rgba(0,160,200,.02) 100%);
-  box-shadow:0 4px 24px rgba(0,0,0,.3),0 0 20px rgba(0,210,230,.06),inset 0 1px 0 rgba(255,255,255,.04);
+  border-color:rgba(168,85,247,0.55);
+  background:linear-gradient(145deg,rgba(168,85,247,.04) 0%,rgba(0,160,200,.02) 100%);
+  box-shadow:0 4px 24px rgba(0,0,0,.3),0 0 20px rgba(168,85,247,.06),inset 0 1px 0 rgba(255,255,255,.04);
 }
 
 /* ── PANEL BLOCK TITLE — index.html: 9.5px, 2px spacing, 700 weight ── */
@@ -258,28 +237,28 @@ body::before{
   font-family:var(--fm);
   font-size:9.5px;font-weight:700;
   letter-spacing:2px;
-  color:rgba(0,210,230,.52);
+  color:rgba(168,85,247,0.55);
   text-transform:uppercase;
   margin-bottom:9px;
   padding-bottom:6px;
-  border-bottom:1px solid rgba(0,210,230,.07);
+  border-bottom:1px solid rgba(168,85,247,.07);
   display:flex;align-items:center;gap:6px;
 }
 .pbt-icon{font-size:11px}
 
 /* ── PIPELINE SYNC STATUS — live canvas sync indicator ── */
 #sync-status-block{
-  border:1px solid rgba(0,210,230,.15);
+  border:1px solid rgba(168,85,247,.15);
   border-radius:var(--r3);
   padding:10px 12px;
-  font-size:9px;color:rgba(0,210,230,.45);
+  font-size:9px;color:rgba(168,85,247,0.55);
   font-family:var(--fm);letter-spacing:.5px;
   line-height:1.9;
 }
 #img-thumb{width:100%;border-radius:var(--r1);border:1px solid var(--bdr);display:none;margin-top:7px}
 
 /* ── WS PIPELINE — index.html ws-status-setup style ── */
-#ws-pipeline{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.48);line-height:2;display:none}
+#ws-pipeline{font-family:var(--fm);font-size:9px;color:rgba(168,85,247,0.55);line-height:2;display:none}
 #ws-pipeline.active{display:block}
 #ws-progress-bar-wrap{background:rgba(0,0,0,.5);border-radius:var(--rpill);height:2px;margin:4px 0 5px;overflow:hidden}
 #ws-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--c2),var(--c));box-shadow:0 0 5px var(--c);transition:width .35s}
@@ -291,11 +270,11 @@ body::before{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:7px;font-size:11px;font-weight:400;
 }
-.ctrl-row label{color:rgba(0,210,230,.5);font-family:var(--fm);letter-spacing:.4px}
+.ctrl-row label{color:rgba(168,85,247,0.55);font-family:var(--fm);letter-spacing:.4px}
 .ctrl-row input[type=range]{
   width:88px;cursor:pointer;
   -webkit-appearance:none;height:2px;
-  background:rgba(0,210,230,.12);
+  background:rgba(168,85,247,.12);
   border-radius:var(--rpill);outline:none;
 }
 .ctrl-row input[type=range]::-webkit-slider-thumb{
@@ -303,27 +282,27 @@ body::before{
   border-radius:50%;background:var(--c);
   box-shadow:0 0 5px var(--c);cursor:pointer;
 }
-.ctrl-row .val{font-family:var(--fm);font-size:10px;color:rgba(0,210,230,.62);min-width:36px;text-align:right}
+.ctrl-row .val{font-family:var(--fm);font-size:10px;color:rgba(168,85,247,.62);min-width:36px;text-align:right}
 
 /* ── TOGGLES — index.html exact ── */
 .toggle-row{
   display:flex;align-items:center;justify-content:space-between;
   font-size:11px;font-weight:400;margin-bottom:6px;
-  color:rgba(0,210,230,.48);font-family:var(--fm);letter-spacing:.3px;
+  color:rgba(168,85,247,0.55);font-family:var(--fm);letter-spacing:.3px;
 }
 .toggle{
   width:29px;height:14px;
-  background:rgba(0,210,230,.05);
-  border:1px solid rgba(0,210,230,.14);
+  background:rgba(168,85,247,.05);
+  border:1px solid rgba(168,85,247,.14);
   border-radius:var(--rpill);
   cursor:pointer;position:relative;
   transition:background .2s;flex-shrink:0;
 }
-.toggle.on{background:rgba(0,210,230,.15);border-color:rgba(0,210,230,.38)}
+.toggle.on{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,0.55)}
 .toggle::after{
   content:'';position:absolute;top:2px;left:2px;
   width:8px;height:8px;
-  background:rgba(0,210,230,.3);border-radius:50%;
+  background:rgba(168,85,247,.3);border-radius:50%;
   transition:left .2s,background .2s;
 }
 .toggle.on::after{left:17px;background:var(--c);box-shadow:0 0 5px var(--c)}
@@ -341,16 +320,16 @@ body::before{
   flex:1;text-align:center;padding:6px 4px;
   font-family:var(--fm);font-size:9px;letter-spacing:1px;
   text-transform:uppercase;cursor:pointer;
-  background:rgba(0,210,230,.04);
-  border:1px solid rgba(0,210,230,.14);
+  background:rgba(168,85,247,.04);
+  border:1px solid rgba(168,85,247,.14);
   border-radius:var(--r1);
-  color:rgba(0,210,230,.42);
+  color:rgba(168,85,247,0.55);
   transition:all .2s;
 }
-.meshy-tab:hover{border-color:rgba(0,210,230,.32);color:rgba(0,210,230,.7)}
+.meshy-tab:hover{border-color:rgba(168,85,247,0.55);color:rgba(168,85,247,.7)}
 .meshy-tab.active{
-  background:rgba(0,210,230,.14);border-color:rgba(0,210,230,.5);
-  color:var(--c);box-shadow:0 0 12px rgba(0,210,230,.14);
+  background:rgba(168,85,247,.14);border-color:rgba(168,85,247,0.55);
+  color:var(--c);box-shadow:0 0 12px rgba(168,85,247,.14);
 }
 .meshy-pane{display:none}
 .meshy-pane.active{display:block}
@@ -361,53 +340,53 @@ body::before{
 #meshy-key-row input{
   flex:1;min-width:0;
   background:rgba(0,0,0,.35);
-  border:1px solid rgba(0,210,230,.16);
+  border:1px solid rgba(168,85,247,.16);
   border-radius:var(--r1);
-  color:rgba(0,210,230,.75);
+  color:rgba(168,85,247,.75);
   font-family:var(--fm);font-size:9px;
   padding:6px 8px;outline:none;
 }
-#meshy-key-row input:focus{border-color:rgba(0,210,230,.45)}
+#meshy-key-row input:focus{border-color:rgba(168,85,247,0.55)}
 #meshy-key-save{
   flex-shrink:0;padding:6px 10px;
-  background:rgba(0,210,230,.08);border:1px solid rgba(0,210,230,.3);
-  border-radius:var(--r1);color:rgba(0,210,230,.65);
+  background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);
+  border-radius:var(--r1);color:rgba(168,85,247,.65);
   font-family:var(--fm);font-size:9px;letter-spacing:.6px;
   cursor:pointer;transition:all .2s;
 }
-#meshy-key-save:hover{background:rgba(0,210,230,.18);color:var(--c)}
+#meshy-key-save:hover{background:rgba(168,85,247,.18);color:var(--c)}
 
 #meshy-drop{
-  border:1px dashed rgba(0,210,230,.28);
+  border:1px dashed rgba(168,85,247,.28);
   border-radius:var(--r2);
   padding:16px 10px;text-align:center;
   cursor:pointer;margin-bottom:8px;
   transition:all .2s;
-  background:rgba(0,210,230,.02);
+  background:rgba(168,85,247,.02);
 }
-#meshy-drop:hover{border-color:rgba(0,210,230,.55);background:rgba(0,210,230,.05)}
-#meshy-drop.has-file{border-style:solid;border-color:rgba(0,232,152,.4)}
-#meshy-drop-text{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.45);letter-spacing:.4px;line-height:1.7}
+#meshy-drop:hover{border-color:rgba(168,85,247,.55);background:rgba(168,85,247,.05)}
+#meshy-drop.has-file{border-style:solid;border-color:rgba(0,232,152,0.55)}
+#meshy-drop-text{font-family:var(--fm);font-size:9px;color:rgba(168,85,247,0.55);letter-spacing:.4px;line-height:1.7}
 #meshy-drop-thumb{max-width:100%;max-height:90px;border-radius:var(--r1);margin-bottom:6px;display:none}
 
 #meshy-prompt{
   width:100%;min-height:64px;resize:vertical;
   background:rgba(0,0,0,.35);
-  border:1px solid rgba(0,210,230,.16);
+  border:1px solid rgba(168,85,247,.16);
   border-radius:var(--r1);
-  color:rgba(0,210,230,.8);
+  color:rgba(168,85,247,.8);
   font-family:var(--fm);font-size:10px;line-height:1.5;
   padding:8px;outline:none;margin-bottom:8px;
 }
-#meshy-prompt:focus{border-color:rgba(0,210,230,.45)}
-#meshy-prompt::placeholder{color:rgba(0,210,230,.25)}
+#meshy-prompt:focus{border-color:rgba(168,85,247,0.55)}
+#meshy-prompt::placeholder{color:rgba(168,85,247,0.55)}
 
 #meshy-art-style{
   width:100%;margin-bottom:8px;
   background:rgba(0,0,0,.35);
-  border:1px solid rgba(0,210,230,.16);
+  border:1px solid rgba(168,85,247,.16);
   border-radius:var(--r1);
-  color:rgba(0,210,230,.75);
+  color:rgba(168,85,247,.75);
   font-family:var(--fm);font-size:9px;
   padding:6px 8px;outline:none;
 }
@@ -415,12 +394,12 @@ body::before{
 #meshy-status-block{
   margin-top:4px;padding:8px 9px;
   background:rgba(0,0,0,.3);
-  border:1px solid rgba(0,210,230,.12);
+  border:1px solid rgba(168,85,247,.12);
   border-radius:var(--r1);
 }
 #meshy-status-text{
   font-family:var(--fm);font-size:9px;letter-spacing:.4px;
-  color:rgba(0,210,230,.55);margin-bottom:6px;
+  color:rgba(168,85,247,.55);margin-bottom:6px;
 }
 #meshy-progress-wrap{
   background:rgba(0,0,0,.4);border-radius:var(--rpill);
@@ -437,57 +416,57 @@ body::before{
 /* ── BUTTONS — index.html exact values ── */
 .btn{
   width:100%;padding:7px;margin-bottom:5px;
-  background:rgba(0,210,230,.08);
-  border:1px solid rgba(0,210,230,.35);
+  background:rgba(168,85,247,.08);
+  border:1px solid rgba(168,85,247,.35);
   border-radius:var(--r1);
-  color:rgba(0,210,230,.62);
+  color:rgba(168,85,247,.62);
   font-family:var(--fm);font-size:9px;
   letter-spacing:1.5px;text-transform:uppercase;
   cursor:pointer;transition:all .2s;
 }
-.btn:hover{background:rgba(0,210,230,.18);border-color:rgba(0,210,230,.52);color:var(--c);box-shadow:0 0 18px rgba(0,210,230,.18)}
-.btn.primary{background:rgba(0,210,230,.08);border-color:rgba(0,210,230,.35);color:var(--c)border-radius:var(--rpill);}
-.btn.primary:hover{background:rgba(0,210,230,.18);box-shadow:0 0 18px rgba(0,210,230,.18)}
-.btn.ws-btn{background:rgba(0,165,200,.04);border-color:rgba(0,165,200,.22);color:var(--c2)}
+.btn:hover{background:rgba(168,85,247,.18);border-color:rgba(168,85,247,0.55);color:var(--c);box-shadow:0 0 18px rgba(168,85,247,.18)}
+.btn.primary{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.55);color:#2b0a45;border-radius:var(--rpill);}
+.btn.primary:hover{background:rgba(168,85,247,.22);box-shadow:0 0 18px rgba(168,85,247,.28)}
+.btn.ws-btn{background:rgba(0,165,200,.04);border-color:rgba(0,165,200,0.55);color:var(--c2)}
 .btn.ws-btn:hover{background:rgba(0,165,200,.14);box-shadow:0 0 14px rgba(0,165,200,.18)}
-.btn.danger{border-color:rgba(240,68,96,.26);color:rgba(240,80,105,.6)}
+.btn.danger{border-color:rgba(240,68,96,0.55);color:rgba(240,80,105,.6)}
 .btn.danger:hover{background:rgba(240,68,96,.08);box-shadow:0 0 12px rgba(240,68,96,.18)}
 
 /* ── STAT GRID — index.html .info-row value treatment ── */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .stat-item{
   background:rgba(0,0,0,.26);
-  border:1px solid rgba(0,210,230,.07);
+  border:1px solid rgba(168,85,247,.07);
   border-radius:var(--r1);padding:5px 7px;
 }
-/* index.html: 9px label, rgba(0,210,230,.3) */
-.stat-item .sk{font-size:7.5px;letter-spacing:1.4px;color:rgba(0,210,230,.27);margin-bottom:1px;font-family:var(--fm)}
-/* index.html #setup h1: 15px, 600 weight, color #0fd8ec → scaled down to 12px here */
-.stat-item .sv{font-size:12px;font-weight:600;color:rgba(0,210,230,.76);font-family:var(--fm)}
+/* index.html: 9px label, rgba(168,85,247,.3) */
+.stat-item .sk{font-size:7.5px;letter-spacing:1.4px;color:rgba(168,85,247,0.55);margin-bottom:1px;font-family:var(--fm)}
+/* index.html #setup h1: 15px, 600 weight, color #a855f7 → scaled down to 12px here */
+.stat-item .sv{font-size:12px;font-weight:600;color:rgba(168,85,247,.76);font-family:var(--fm)}
 
 /* ── CONFIDENCE BAR ── */
 .conf-bar-wrap{background:rgba(0,0,0,.38);border-radius:var(--rpill);height:3px;margin-top:4px}
-.conf-bar{height:100%;border-radius:var(--rpill);transition:width .5s;background:linear-gradient(90deg,rgba(0,165,200,.8),rgba(0,235,200,.9));box-shadow:0 0 5px rgba(0,210,230,.42)}
+.conf-bar{height:100%;border-radius:var(--rpill);transition:width .5s;background:linear-gradient(90deg,rgba(0,165,200,.8),rgba(0,235,200,.9));box-shadow:0 0 5px rgba(168,85,247,.42)}
 .src-badge{
   display:inline-block;padding:2px 7px;
   font-family:var(--fm);font-size:8px;
   letter-spacing:.7px;border-radius:var(--r1);
   text-transform:uppercase;margin-top:4px;border:1px solid;
 }
-.src-badge.vlm{background:rgba(0,165,200,.09);color:var(--c2);border-color:rgba(0,165,200,.18)}
-.src-badge.onnx{background:rgba(0,232,152,.07);color:var(--green);border-color:rgba(0,232,152,.17)}
-.src-badge.anthropic{background:rgba(0,210,230,.07);color:var(--c);border-color:rgba(0,210,230,.17)}
-.src-badge.heuristic{background:rgba(232,122,68,.07);color:var(--amber);border-color:rgba(232,122,68,.17)}
+.src-badge.vlm{background:rgba(0,165,200,.09);color:var(--c2);border-color:rgba(0,165,200,0.55)}
+.src-badge.onnx{background:rgba(0,232,152,.07);color:var(--green);border-color:rgba(0,232,152,0.55)}
+.src-badge.anthropic{background:rgba(168,85,247,.07);color:var(--c);border-color:rgba(168,85,247,0.55)}
+.src-badge.heuristic{background:rgba(232,122,68,.07);color:var(--amber);border-color:rgba(232,122,68,0.55)}
 
 /* ── EVENT LOG — index.html 9px/1.5px spacing style ── */
 #anno-log{
   max-height:148px;overflow-y:auto;
   font-family:var(--fm);font-size:8.5px;
-  color:rgba(0,210,230,.36);line-height:1.9;
+  color:rgba(168,85,247,0.55);line-height:1.9;
   letter-spacing:.4px;
 }
-#anno-log .log-entry{border-bottom:1px solid rgba(0,210,230,.03);padding:1px 0}
-#anno-log .log-entry .ts{color:rgba(0,210,230,.19)}
+#anno-log .log-entry{border-bottom:1px solid rgba(168,85,247,.03);padding:1px 0}
+#anno-log .log-entry .ts{color:rgba(168,85,247,0.55)}
 #anno-log .log-entry.warn{color:rgba(212,170,60,.58)}
 #anno-log .log-entry.ok{color:rgba(0,232,152,.58)}
 #anno-log .log-entry.ws{color:rgba(0,165,200,.58)}
@@ -514,24 +493,24 @@ body::before{
 #holo-ghost.fade{opacity:.03}
 
 /* Corner brackets */
-.corner{position:absolute;width:16px;height:16px;border-color:rgba(0,210,230,.26);border-style:solid;z-index:8;transition:border-color .3s}
+.corner{position:absolute;width:16px;height:16px;border-color:rgba(168,85,247,0.55);border-style:solid;z-index:8;transition:border-color .3s}
 .corner.tl{top:8px;left:8px;border-width:1px 0 0 1px;border-radius:var(--r2) 0 0 0}
 .corner.tr{top:8px;right:8px;border-width:1px 1px 0 0;border-radius:0 var(--r2) 0 0}
 .corner.bl{bottom:8px;left:8px;border-width:0 0 1px 1px;border-radius:0 0 0 var(--r2)}
 .corner.br{bottom:8px;right:8px;border-width:0 1px 1px 0;border-radius:0 0 var(--r2) 0}
-#viewport:hover .corner{border-color:rgba(0,210,230,.46)}
+#viewport:hover .corner{border-color:rgba(168,85,247,0.55)}
 .corner::after{content:'';position:absolute;width:3px;height:3px;border-radius:50%;background:var(--c);box-shadow:0 0 5px var(--c)}
 .corner.tl::after{top:-1.5px;left:-1.5px}
 .corner.tr::after{top:-1.5px;right:-1.5px}
 .corner.bl::after{bottom:-1.5px;left:-1.5px}
 .corner.br::after{bottom:-1.5px;right:-1.5px}
 
-#crosshair{position:absolute;top:50%;left:50%;width:10px;height:10px;transform:translate(-50%,-50%);border:1px solid rgba(0,210,230,.11);border-radius:50%;pointer-events:none;z-index:8}
-#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(0,210,230,.11)}
+#crosshair{position:absolute;top:50%;left:50%;width:10px;height:10px;transform:translate(-50%,-50%);border:1px solid rgba(168,85,247,.11);border-radius:50%;pointer-events:none;z-index:8}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(168,85,247,.11)}
 #crosshair::before{width:1px;height:18px;left:50%;top:-4px;margin-left:-.5px}
 #crosshair::after{width:18px;height:1px;top:50%;left:-4px;margin-top:-.5px}
 
-#view-label{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-family:var(--fm);font-size:8px;letter-spacing:2.5px;color:rgba(0,210,230,.16);text-transform:uppercase;pointer-events:none;z-index:8}
+#view-label{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-family:var(--fm);font-size:8px;letter-spacing:2.5px;color:rgba(168,85,247,0.55);text-transform:uppercase;pointer-events:none;z-index:8}
 
 /* ── MODE TABS — index.html demo-btn / btn-launch pill style ── */
 #mode-tabs{
@@ -551,24 +530,24 @@ body::before{
   padding:5px 14px;
   border:1px solid transparent;
   background:transparent;
-  color:rgba(0,210,230,.26);
+  color:rgba(168,85,247,0.55);
   cursor:pointer;
   transition:all .2s;
   text-transform:uppercase;
   border-radius:var(--rpill);
 }
 .mtab.active{
-  border-color:rgba(0,210,230,.35);
+  border-color:rgba(168,85,247,0.55);
   color:var(--c);
-  background:rgba(0,210,230,.08);
-  box-shadow:0 0 18px rgba(0,210,230,.12);
+  background:rgba(168,85,247,.08);
+  box-shadow:0 0 18px rgba(168,85,247,.12);
 }
-.mtab:hover:not(.active){color:rgba(0,210,230,.48);background:rgba(0,210,230,.04)}
+.mtab:hover:not(.active){color:rgba(168,85,247,0.55);background:rgba(168,85,247,.04)}
 
 #hud-overlay{
   position:absolute;top:44px;right:10px;
   font-family:var(--fm);font-size:8.5px;
-  color:rgba(0,210,230,.2);line-height:2;
+  color:rgba(168,85,247,0.55);line-height:2;
   text-align:right;pointer-events:none;z-index:10;letter-spacing:.7px;
 }
 
@@ -583,29 +562,29 @@ body::before{
 .spinner-wrap{position:relative;width:58px;height:58px;margin-bottom:18px}
 .spinner-outer{
   width:58px;height:58px;border-radius:50%;
-  border:1.5px solid rgba(0,210,230,.06);
-  border-top-color:var(--c);border-right-color:rgba(0,210,230,.26);
+  border:1.5px solid rgba(168,85,247,.06);
+  border-top-color:var(--c);border-right-color:rgba(168,85,247,0.55);
   animation:spin 1s linear infinite;position:absolute;inset:0;
 }
 .spinner-inner{
   width:38px;height:38px;border-radius:50%;
-  border:1px solid rgba(0,210,230,.05);
-  border-bottom-color:rgba(0,210,230,.42);
+  border:1px solid rgba(168,85,247,.05);
+  border-bottom-color:rgba(168,85,247,0.55);
   animation:spin .65s linear infinite reverse;
   position:absolute;top:10px;left:10px;
 }
 .spinner-wrap::after{
   content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   width:10px;height:10px;border-radius:50%;
-  background:radial-gradient(circle,rgba(0,210,230,1) 0%,rgba(0,165,200,.6) 50%,transparent 100%);
-  box-shadow:0 0 9px rgba(0,210,230,.8),0 0 18px rgba(0,165,200,.4);
+  background:radial-gradient(circle,rgba(168,85,247,1) 0%,rgba(0,165,200,.6) 50%,transparent 100%);
+  box-shadow:0 0 9px rgba(168,85,247,.8),0 0 18px rgba(0,165,200,.4);
   animation:pulse 1.5s ease-in-out infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 /* index.html text style: 15px, 3px letter-spacing */
-#load-text{font-size:11px;color:var(--c);letter-spacing:2.5px;text-shadow:0 0 10px rgba(0,210,230,.5)}
-#load-sub{font-size:9px;color:rgba(0,210,230,.3);margin-top:4px;letter-spacing:.7px}
-#load-pct{font-size:20px;font-weight:600;color:var(--c);margin-top:10px;text-shadow:0 0 16px rgba(0,210,230,.68);letter-spacing:3px}
+#load-text{font-size:11px;color:var(--c);letter-spacing:2.5px;text-shadow:0 0 10px rgba(168,85,247,.5)}
+#load-sub{font-size:9px;color:rgba(168,85,247,0.55);margin-top:4px;letter-spacing:.7px}
+#load-pct{font-size:20px;font-weight:600;color:var(--c);margin-top:10px;text-shadow:0 0 16px rgba(168,85,247,.68);letter-spacing:3px}
 #progress-bar{position:absolute;bottom:0;left:0;height:1px;background:linear-gradient(90deg,transparent,var(--c),transparent);width:0%;transition:width .3s;box-shadow:0 0 6px var(--c)}
 
 /* ── Welcome — full-bleed overlay, orb manually centered */
@@ -628,7 +607,7 @@ body::before{
 #welcome-orb-wrap::before{
   content:'';position:absolute;
   inset:-22px;border-radius:50%;
-  border:1px solid rgba(0,210,230,.09);
+  border:1px solid rgba(168,85,247,.09);
   animation:spin 10s linear infinite;
   pointer-events:none;
 }
@@ -642,28 +621,28 @@ body::before{
 }
 #welcome-orb{
   width:180px;height:180px;border-radius:50%;
-  background:radial-gradient(circle at 38% 38%,rgba(255,255,255,.06) 0%,rgba(0,210,230,.10) 12%,rgba(0,120,180,.06) 45%,rgba(0,50,100,.03) 75%,transparent 100%);
-  box-shadow:0 0 0 1px rgba(0,210,230,.13),0 0 28px rgba(0,210,230,.40),0 0 70px rgba(0,165,205,.20),0 0 130px rgba(0,104,186,.10);
+  background:radial-gradient(circle at 38% 38%,rgba(255,255,255,.06) 0%,rgba(168,85,247,.10) 12%,rgba(0,120,180,.06) 45%,rgba(0,50,100,.03) 75%,transparent 100%);
+  box-shadow:0 0 0 1px rgba(168,85,247,.13),0 0 28px rgba(168,85,247,.40),0 0 70px rgba(0,165,205,.20),0 0 130px rgba(0,104,186,.10);
   animation:orbPulse 4s ease-in-out infinite;
   position:relative;
   overflow:hidden; /* clips #orb-canvas particles to circular boundary */
 }
 @keyframes orbPulse{
-  0%,100%{box-shadow:0 0 0 1px rgba(0,210,230,.13),0 0 16px rgba(0,210,230,.52),0 0 40px rgba(0,165,205,.32),0 0 80px rgba(0,104,186,.16)}
-  50%{box-shadow:0 0 0 1px rgba(0,210,230,.20),0 0 24px rgba(0,210,230,.68),0 0 56px rgba(0,165,205,.42),0 0 100px rgba(0,104,186,.20)}
+  0%,100%{box-shadow:0 0 0 1px rgba(168,85,247,.13),0 0 16px rgba(168,85,247,.52),0 0 40px rgba(0,165,205,.32),0 0 80px rgba(0,104,186,.16)}
+  50%{box-shadow:0 0 0 1px rgba(168,85,247,.20),0 0 24px rgba(168,85,247,.68),0 0 56px rgba(0,165,205,.42),0 0 100px rgba(0,104,186,.20)}
 }
 /* index.html welcome text: 10px, 2px letter-spacing */
 #welcome .wt{
   position:absolute;bottom:56px;left:0;right:0;
   font-family:var(--fm);font-size:10px;letter-spacing:2px;
-  color:rgba(0,210,230,.14);text-transform:uppercase;
+  color:rgba(168,85,247,0.55);text-transform:uppercase;
   text-align:center;line-height:2.4;
   pointer-events:none;
 }
 #welcome .wbig{
   position:absolute;bottom:36px;left:0;right:0;
   font-family:var(--fm);font-size:10px;
-  color:rgba(0,210,230,.08);letter-spacing:2px;
+  color:rgba(168,85,247,0.55);letter-spacing:2px;
   text-align:center;animation:pulse 3s ease-in-out infinite;
   pointer-events:none;
 }
@@ -682,52 +661,53 @@ body::before{
   display:flex;align-items:center;
   padding:0 16px;gap:16px;z-index:200;
   font-family:var(--fm);font-size:8.5px;
-  color:rgba(0,210,230,.23);letter-spacing:.7px;
+  color:rgba(168,85,247,0.55);letter-spacing:.7px;
 }
-#bottom-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,210,230,.11),transparent)}
+#bottom-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.11),transparent)}
 #bottom-bar .bitem{display:flex;align-items:center;gap:5px}
-#bottom-bar .bval{color:rgba(0,210,230,.48)}
-#bottom-bar .bgold{color:rgba(0,210,230,.62)}
+#bottom-bar .bval{color:rgba(168,85,247,0.55)}
+#bottom-bar .bgold{color:rgba(168,85,247,.62)}
 #coords{margin-left:auto}
-#time-display{color:rgba(0,210,230,.28)}
+#time-display{color:rgba(168,85,247,0.55)}
 
 /* ── IFC LEGEND ── */
 .ifc-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .ifc-tag{padding:2px 7px;border-radius:var(--r1);font-family:var(--fm);font-size:7.5px;letter-spacing:.7px;border:1px solid}
-.ifc-tag.slab{background:rgba(0,96,144,.1);color:#5abbd8;border-color:rgba(0,96,144,.2)}
-.ifc-tag.col{background:rgba(0,210,230,.06);color:var(--c);border-color:rgba(0,210,230,.17)}
-.ifc-tag.wall{background:rgba(0,165,200,.06);color:var(--c2);border-color:rgba(0,165,200,.17)}
-.ifc-tag.roof{background:rgba(0,210,230,.04);color:rgba(0,210,230,.54);border-color:rgba(0,210,230,.13)}
-.ifc-tag.beam{background:rgba(0,232,152,.06);color:var(--green);border-color:rgba(0,232,152,.17)}
+.ifc-tag.slab{background:rgba(0,96,144,.1);color:#5abbd8;border-color:rgba(0,96,144,0.55)}
+.ifc-tag.col{background:rgba(168,85,247,.06);color:var(--c);border-color:rgba(168,85,247,0.55)}
+.ifc-tag.wall{background:rgba(0,165,200,.06);color:var(--c2);border-color:rgba(0,165,200,0.55)}
+.ifc-tag.roof{background:rgba(168,85,247,.04);color:rgba(168,85,247,0.55);border-color:rgba(168,85,247,0.55)}
+.ifc-tag.beam{background:rgba(0,232,152,.06);color:var(--green);border-color:rgba(0,232,152,0.55)}
 
 /* ── LATENT KEYS ── */
-#latent-keys{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.3);margin-top:4px}
-.lkey-badge{display:inline-block;background:rgba(0,0,0,.44);border:1px solid rgba(0,210,230,.1);border-radius:var(--r1);padding:2px 6px;margin:2px;cursor:pointer;transition:border-color .15s;font-size:8px}
-.lkey-badge:hover{border-color:rgba(0,210,230,.38)}
+#latent-keys{font-family:var(--fm);font-size:9px;color:rgba(168,85,247,0.55);margin-top:4px}
+.lkey-badge{display:inline-block;background:rgba(0,0,0,.44);border:1px solid rgba(168,85,247,.1);border-radius:var(--r1);padding:2px 6px;margin:2px;cursor:pointer;transition:border-color .15s;font-size:8px}
+.lkey-badge:hover{border-color:rgba(168,85,247,0.55)}
 
 #depth-canvas{width:100%;height:48px;border:1px solid var(--bdr);border-radius:var(--r1);margin-top:6px;image-rendering:pixelated;display:none}
 
 /* shared dim text — index.html .info-row style */
-.dim-text{font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.34);line-height:1.9;letter-spacing:.4px}
+.dim-text{font-family:var(--fm);font-size:9px;color:rgba(168,85,247,0.55);line-height:1.9;letter-spacing:.4px}
 
 /* ─── GESTURE ENGINE CSS ─────────────────────────────────────────────────── */
 /* Gesture status pill — floats top-centre of viewport */
 #gesture-pill{
+  display:none; /* status pill hidden — was overlaying the viewport/mode tabs */
   position:absolute;top:52px;left:50%;transform:translateX(-50%);
-  display:flex;align-items:center;gap:8px;
+  align-items:center;gap:8px;
   background:rgba(5,7,15,.88);
-  border:1px solid rgba(0,210,230,.18);
+  border:1px solid rgba(168,85,247,.18);
   border-radius:var(--rpill);
   padding:5px 14px;z-index:30;
   font-family:var(--fm);font-size:9px;letter-spacing:.8px;
-  color:rgba(0,210,230,.38);
+  color:rgba(168,85,247,0.55);
   backdrop-filter:blur(8px);
   transition:border-color .3s,box-shadow .3s;
   pointer-events:none;
 }
 #gesture-pill.active{
-  border-color:rgba(0,210,230,.55);
-  box-shadow:0 0 16px rgba(0,210,230,.18);
+  border-color:rgba(168,85,247,.55);
+  box-shadow:0 0 16px rgba(168,85,247,.18);
   color:var(--c);
 }
 #gesture-led{
@@ -772,7 +752,7 @@ body::before{
 #gesture-hud{
   position:absolute;bottom:18px;right:10px;
   font-family:var(--fm);font-size:8px;
-  color:rgba(0,210,230,.28);line-height:2;text-align:right;
+  color:rgba(168,85,247,0.55);line-height:2;text-align:right;
   pointer-events:none;z-index:25;letter-spacing:.6px;
 }
 #g-gesture{color:var(--c);font-size:10px;font-weight:600}
@@ -808,14 +788,15 @@ body::before{
 
 /* Phase indicator pill */
 #nano-pill{
+  display:none; /* status pill hidden — was overlaying the viewport/mode tabs */
   position:absolute;top:82px;left:50%;transform:translateX(-50%);
-  display:flex;align-items:center;gap:8px;
+  align-items:center;gap:8px;
   background:rgba(4,5,14,.90);
   border:1px solid rgba(0,240,180,.18);
   border-radius:var(--rpill);
   padding:5px 16px;z-index:31;
   font-family:var(--fm);font-size:9px;letter-spacing:.9px;
-  color:rgba(0,240,180,.42);
+  color:rgba(0,240,180,0.55);
   backdrop-filter:blur(8px);
   pointer-events:none;
   transition:border-color .4s,color .4s;
@@ -830,14 +811,14 @@ body::before{
   background:rgba(0,240,180,.3);
   transition:all .4s;flex-shrink:0;
 }
-#nano-phase-led.solid{background:#3bbdd0;box-shadow:0 0 7px #3bbdd0}
+#nano-phase-led.solid{background:#c9a0ff;box-shadow:0 0 7px #c9a0ff}
 #nano-phase-led.dissolving{background:#d4aa3c;box-shadow:0 0 7px #d4aa3c;animation:pulse 0.6s ease-in-out infinite}
 #nano-phase-led.bim{background:#00e898;box-shadow:0 0 9px #00e898}
 
 /* Morph button — index.html .demo-btn derivative */
 .btn.morph-btn{
   background:rgba(0,240,180,.04);
-  border-color:rgba(0,240,180,.22);
+  border-color:rgba(0,240,180,0.55);
   color:rgba(0,240,180,.6);
 }
 .btn.morph-btn:hover{
@@ -855,15 +836,15 @@ body::before{
 
 /* Gesture button — same treatment */
 .btn.gesture-btn{
-  background:rgba(0,210,230,.04);
-  border-color:rgba(0,210,230,.22);
-  color:rgba(0,210,230,.55);
+  background:rgba(168,85,247,.04);
+  border-color:rgba(168,85,247,0.55);
+  color:rgba(168,85,247,.55);
 }
 .btn.gesture-btn.active{
-  background:rgba(0,210,230,.10);
-  border-color:rgba(0,210,230,.45);
+  background:rgba(168,85,247,.10);
+  border-color:rgba(168,85,247,0.55);
   color:var(--c);
-  box-shadow:0 0 18px rgba(0,210,230,.18);
+  box-shadow:0 0 18px rgba(168,85,247,.18);
 }
 
 /* Nano stat items */
@@ -874,7 +855,7 @@ body::before{
   background:rgba(0,0,0,.28);border:1px solid rgba(0,240,180,.07);
   border-radius:var(--r1);padding:4px 6px;
 }
-.nano-stat-item .nsk{font-size:7px;letter-spacing:1.4px;color:rgba(0,240,180,.28);margin-bottom:1px}
+.nano-stat-item .nsk{font-size:7px;letter-spacing:1.4px;color:rgba(0,240,180,0.55);margin-bottom:1px}
 .nano-stat-item .nsv{font-size:11px;font-weight:600;color:rgba(0,240,180,.72)}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -908,7 +889,7 @@ body::before{
   gap: 7px;
   padding: 44px 9px 10px; /* 44px top clears the dock btn */
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,210,230,.12) transparent;
+  scrollbar-color:rgba(168,85,247,0.55) transparent;
   transition: opacity 180ms ease, visibility 180ms ease;
   opacity: 1;
   visibility: visible;
@@ -927,10 +908,10 @@ body::before{
   z-index: 50;
   width: 22px;
   height: 22px;
-  background: rgba(0,210,230,0.06);
-  border: 1px solid rgba(0,210,230,0.22);
+  background: rgba(168,85,247,0.06);
+  border: 1px solid rgba(168,85,247,0.22);
   border-radius: var(--r1);
-  color: rgba(0,210,230,0.55);
+  color: rgba(168,85,247,0.55);
   font-size: 13px;
   cursor: pointer;
   display: flex;
@@ -941,10 +922,10 @@ body::before{
   padding: 0;
 }
 #left-dock-btn:hover {
-  background: rgba(0,210,230,0.14);
-  border-color: rgba(0,210,230,0.50);
+  background: rgba(168,85,247,0.14);
+  border-color:rgba(168,85,247,0.55);
   color: var(--c);
-  box-shadow: 0 0 12px rgba(0,210,230,0.18);
+  box-shadow: 0 0 12px rgba(168,85,247,0.18);
 }
 #left-dock-btn:active { transform: scale(0.92); }
 
@@ -985,12 +966,12 @@ body::before{
   justify-content: flex-start; /* icons hug left edge */
   padding-left: 5px;
   font-size: 14px;
-  color: rgba(0,210,230,0.32);
+  color:rgba(168,85,247,0.55);
   cursor: pointer;
   border-radius: 0;            /* flush with sliver */
   transition: color 0.15s, background 0.15s;
 }
-.lip-icon:hover { color: var(--c); background: rgba(0,210,230,0.08); }
+.lip-icon:hover { color: var(--c); background: rgba(168,85,247,0.08); }
 
 /* Thin glow line on right edge */
 #left-panel::after {
@@ -998,7 +979,7 @@ body::before{
   position: absolute;
   top: 0; right: 0; bottom: 0;
   width: 1px;
-  background: linear-gradient(180deg, transparent 0%, rgba(0,210,230,0.12) 30%, rgba(0,210,230,0.08) 70%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(168,85,247,0.12) 30%, rgba(168,85,247,0.08) 70%, transparent 100%);
   pointer-events: none;
 }
 
@@ -1035,7 +1016,7 @@ body::before{
   gap: 7px;
   padding: 44px 9px 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,210,230,.12) transparent;
+  scrollbar-color:rgba(168,85,247,0.55) transparent;
   transition: opacity 180ms ease, visibility 180ms ease;
   opacity: 1;
   visibility: visible;
@@ -1053,10 +1034,10 @@ body::before{
   z-index: 50;
   width: 22px;
   height: 22px;
-  background: rgba(0,210,230,0.06);
-  border: 1px solid rgba(0,210,230,0.22);
+  background: rgba(168,85,247,0.06);
+  border: 1px solid rgba(168,85,247,0.22);
   border-radius: var(--r1);
-  color: rgba(0,210,230,0.55);
+  color: rgba(168,85,247,0.55);
   font-size: 13px;
   cursor: pointer;
   display: flex;
@@ -1066,10 +1047,10 @@ body::before{
   padding: 0;
 }
 #right-dock-btn:hover {
-  background: rgba(0,210,230,0.14);
-  border-color: rgba(0,210,230,0.50);
+  background: rgba(168,85,247,0.14);
+  border-color:rgba(168,85,247,0.55);
   color: var(--c);
-  box-shadow: 0 0 12px rgba(0,210,230,0.18);
+  box-shadow: 0 0 12px rgba(168,85,247,0.18);
 }
 #right-dock-btn:active { transform: scale(0.92); }
 #right-panel.collapsed #right-dock-btn { left: auto; right: 3px; }
@@ -1107,11 +1088,11 @@ body::before{
   justify-content: flex-end;
   padding-right: 5px;
   font-size: 14px;
-  color: rgba(0,210,230,0.32);
+  color:rgba(168,85,247,0.55);
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
-.rip-icon:hover { color: var(--c); background: rgba(0,210,230,0.08); }
+.rip-icon:hover { color: var(--c); background: rgba(168,85,247,0.08); }
 
 
    MOBILE RESPONSIVE LAYER — KarlCON v16.0
@@ -1221,7 +1202,7 @@ body::before{
   bottom: 0; left: 0; right: 0;
   height: 56px;
   background: rgba(7,9,16,0.98);
-  border-top: 1px solid rgba(0,210,230,0.10);
+  border-top: 1px solid rgba(168,85,247,0.10);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 300;
@@ -1230,7 +1211,7 @@ body::before{
 }
 #mob-nav::before {
   content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(0,210,230,.14),transparent);
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.14),transparent);
 }
 .mob-tab {
   display: flex;
@@ -1240,7 +1221,7 @@ body::before{
   flex: 1;
   gap: 3px;
   cursor: pointer;
-  color: rgba(0,210,230,0.28);
+  color:rgba(168,85,247,0.55);
   font-family: var(--fm);
   font-size: 7.5px;
   letter-spacing: 1px;
@@ -1254,9 +1235,9 @@ body::before{
 .mob-tab .mob-icon { font-size: 18px; line-height: 1; }
 .mob-tab.active { color: var(--c); }
 .mob-tab.active .mob-icon {
-  filter: drop-shadow(0 0 6px rgba(0,210,230,0.7));
+  filter: drop-shadow(0 0 6px rgba(168,85,247,0.7));
 }
-.mob-tab:active { background: rgba(0,210,230,0.06); }
+.mob-tab:active { background: rgba(168,85,247,0.06); }
 
 /* ── DRAWER SHEETS ── */
 .mob-drawer {
@@ -1267,7 +1248,7 @@ body::before{
   z-index: 250;
   background: linear-gradient(180deg, rgba(8,9,18,0.0) 0%, rgba(8,9,18,0.97) 6%);
   /* starts transparent at top, solid below */
-  border-top: 1px solid rgba(0,210,230,0.10);
+  border-top: 1px solid rgba(168,85,247,0.10);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   overflow-y: auto;
@@ -1286,7 +1267,7 @@ body::before{
   display: block;
   width: 36px; height: 4px;
   border-radius: 100px;
-  background: rgba(0,210,230,0.18);
+  background: rgba(168,85,247,0.18);
   margin: 10px auto 14px;
   flex-shrink: 0;
 }
@@ -1300,10 +1281,10 @@ body::before{
 }
 .mob-quick-btn {
   padding: 12px 8px;
-  background: rgba(0,210,230,0.07);
-  border: 1px solid rgba(0,210,230,0.25);
+  background: rgba(168,85,247,0.07);
+  border: 1px solid rgba(168,85,247,0.25);
   border-radius: var(--r2);
-  color: rgba(0,210,230,0.75);
+  color: rgba(168,85,247,0.75);
   font-family: var(--fm);
   font-size: 9px;
   letter-spacing: 1px;
@@ -1314,16 +1295,16 @@ body::before{
   -webkit-tap-highlight-color: transparent;
 }
 .mob-quick-btn:active {
-  background: rgba(0,210,230,0.16);
-  border-color: rgba(0,210,230,0.5);
+  background: rgba(168,85,247,0.16);
+  border-color:rgba(168,85,247,0.55);
 }
 .mob-quick-btn.primary {
-  background: rgba(0,210,230,0.10);
-  border-color: rgba(0,210,230,0.45);
+  background: rgba(168,85,247,0.10);
+  border-color:rgba(168,85,247,0.55);
   color: var(--c);
 }
 .mob-quick-btn.danger {
-  border-color: rgba(240,68,96,0.3);
+  border-color:rgba(240,68,96,0.55);
   color: rgba(240,90,115,0.7);
 }
 
@@ -1334,12 +1315,12 @@ body::before{
   gap: 8px;
   padding: 8px 10px;
   background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(0,210,230,0.08);
+  border: 1px solid rgba(168,85,247,0.08);
   border-radius: var(--r2);
   margin-bottom: 12px;
   font-family: var(--fm);
   font-size: 9px;
-  color: rgba(0,210,230,0.40);
+  color:rgba(168,85,247,0.55);
   letter-spacing: 0.5px;
 }
 
@@ -1347,14 +1328,14 @@ body::before{
 /* ── ICON ACTIVE STATE — white highlight ── */
 .lip-icon.active,
 .rip-icon.active {
-  color: #ffffff;
-  background: rgba(0,210,230,0.14);
-  box-shadow: inset 0 0 0 1px rgba(0,210,230,0.35);
+  color: #2b0a45;
+  background: rgba(168,85,247,0.20);
+  box-shadow: inset 0 0 0 1px rgba(168,85,247,0.35);
 }
 /* Glow the panel block title when it's the scroll target */
 .panel-block-title.scrolled-to {
-  color: rgba(255,255,255,0.9);
-  text-shadow: 0 0 12px rgba(0,210,230,0.6);
+  color: rgba(43,10,69,0.92);
+  text-shadow: 0 0 12px rgba(168,85,247,0.6);
   transition: color 0.3s, text-shadow 0.3s;
 }
 
@@ -1362,7 +1343,7 @@ body::before{
 </head>
 <body>
 <noscript>
-  <div style="font-family:monospace;padding:2rem;color:#0fd8ec;background:#080910;text-align:center">
+  <div style="font-family:monospace;padding:2rem;color:#a855f7;background:#080910;text-align:center">
     KarlCON BIM Hologram requires JavaScript. Please enable it in your browser settings.
   </div>
 </noscript>
@@ -1383,7 +1364,7 @@ body::before{
          isn't, or at the video relay which doesn't serve this endpoint. -->
     <input id="ws-url-input" type="hidden" value=""/>
     <button type="button" class="btn-xs" onclick="connectWS()">◇ CONNECT</button>
-    <button type="button" class="btn-xs" id="bim-redirect-btn" onclick="openBIMPipeline()" style="border-color:rgba(0,210,120,.35);color:rgba(0,230,140,.8);background:rgba(0,180,100,.06);margin-left:4px">⬡ BIM PIPELINE</button>
+    <button type="button" class="btn-xs" id="bim-redirect-btn" onclick="openBIMPipeline()" style="border-color:rgba(0,210,120,0.55);color:rgba(0,230,140,.8);background:rgba(0,180,100,.06);margin-left:4px">⬡ BIM PIPELINE</button>
   </div>
   <div id="ws-pill" onclick="connectWS()">
     <div id="ws-dot" class="closed"></div>
@@ -1432,7 +1413,7 @@ body::before{
       <div class="meshy-pane active" id="meshy-pane-image">
         <input type="file" id="meshy-file-input" accept="image/png,image/jpeg" style="display:none" onchange="MeshyPipeline.onFileChosen(this.files)"/>
         <div id="meshy-drop" onclick="document.getElementById('meshy-file-input').click()"
-             ondragover="event.preventDefault();this.style.borderColor='rgba(0,210,230,.6)'"
+             ondragover="event.preventDefault();this.style.borderColor='rgba(168,85,247,.6)'"
              ondragleave="this.style.borderColor=''"
              ondrop="MeshyPipeline.onDrop(event)">
           <img id="meshy-drop-thumb" alt=""/>
@@ -1494,11 +1475,11 @@ body::before{
       <button type="button" class="btn primary" onclick="triggerBIM()">⬡ GENERATE BIM MODEL</button>
       <button type="button" class="btn morph-btn" id="nano-morph-btn" onclick="triggerNanoMorph()">⬡ NANOMORPH: SOLID → BIM</button>
       <button type="button" class="btn gesture-btn" id="gesture-toggle-btn" onclick="toggleGestureEngine()">◈ GESTURE CONTROL: OFF</button>
-      <button type="button" class="btn" id="gesture-source-btn" onclick="toggleGestureSource()" title="Switch gesture input between PC webcam and PTZ phone stream (karlcon_server_ptz.py /screen.mjpeg)" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ GESTURE SOURCE: WEBCAM</button>
-      <button type="button" class="btn" id="pip-toggle-btn" onclick="togglePiP(document.getElementById('t-pip'))" title="Show/hide the hand landmark skeleton drawn directly on the main frame" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ SHOW GESTURE OVERLAY</button>
-      <button type="button" class="btn" id="relay-gesture-btn" onclick="toggleRelayGesture()" title="Drive the model from the Python gesture tracker's quaternion/curl data via the HF Space relay, instead of in-browser MediaPipe. Falls back automatically if the relay's gesture channel drops." style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ RELAY GESTURE: OFF</button>
-      <button type="button" class="btn" id="calibrate-btn" onclick="startCalibration()" title="70-second guided session to collect 70 samples per gesture and warm-start the classifier" style="display:none;border-color:rgba(212,170,60,.35);color:rgba(212,170,60,.65);background:rgba(212,170,60,.04)">◈ CALIBRATE GESTURES</button>
-      <button type="button" class="btn" id="fan-mode-btn" onclick="toggleFanMode()" title="Split canvas into 4 rotated views for Pepper's Ghost pyramid display" style="border-color:rgba(0,210,230,.25);letter-spacing:.6px">◈ FAN OFF</button>
+      <button type="button" class="btn" id="gesture-source-btn" onclick="toggleGestureSource()" title="Switch gesture input between PC webcam and PTZ phone stream (karlcon_server_ptz.py /screen.mjpeg)" style="border-color:rgba(168,85,247,0.55);letter-spacing:.6px">◈ GESTURE SOURCE: WEBCAM</button>
+      <button type="button" class="btn" id="pip-toggle-btn" onclick="togglePiP(document.getElementById('t-pip'))" title="Show/hide the hand landmark skeleton drawn directly on the main frame" style="border-color:rgba(168,85,247,0.55);letter-spacing:.6px">◈ SHOW GESTURE OVERLAY</button>
+      <button type="button" class="btn" id="relay-gesture-btn" onclick="toggleRelayGesture()" title="Drive the model from the Python gesture tracker's quaternion/curl data via the HF Space relay, instead of in-browser MediaPipe. Falls back automatically if the relay's gesture channel drops." style="border-color:rgba(168,85,247,0.55);letter-spacing:.6px">◈ RELAY GESTURE: OFF</button>
+      <button type="button" class="btn" id="calibrate-btn" onclick="startCalibration()" title="70-second guided session to collect 70 samples per gesture and warm-start the classifier" style="display:none;border-color:rgba(212,170,60,0.55);color:rgba(212,170,60,.65);background:rgba(212,170,60,.04)">◈ CALIBRATE GESTURES</button>
+      <button type="button" class="btn" id="fan-mode-btn" onclick="toggleFanMode()" title="Split canvas into 4 rotated views for Pepper's Ghost pyramid display" style="border-color:rgba(168,85,247,0.55);letter-spacing:.6px">◈ FAN OFF</button>
       <button type="button" class="btn" onclick="exportView()">↯ EXPORT PNG SNAPSHOT</button>
       <button type="button" class="btn" onclick="resetScene()">↺ RESET SCENE</button>
       <button type="button" class="btn danger" onclick="clearAll()">✕ CLEAR ALL</button>
@@ -1560,31 +1541,31 @@ body::before{
       <div class="mtab" onclick="setMode('WIREFRAME',this)">WIREFRAME</div>
     </div>
     <div id="hud-overlay">
-      <div>FPS: <span id="h-fps" style="color:rgba(0,210,230,.55)">—</span></div>
-      <div>VERTS: <span id="h-verts" style="color:rgba(0,210,230,.45)">—</span></div>
-      <div id="h-time" style="color:rgba(0,210,230,.22)"></div>
+      <div>FPS: <span id="h-fps" style="color:rgba(168,85,247,.55)">—</span></div>
+      <div>VERTS: <span id="h-verts" style="color:rgba(168,85,247,0.55)">—</span></div>
+      <div id="h-time" style="color:rgba(168,85,247,0.55)"></div>
     </div>
     <div id="pyramid-overlay">
       <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
         <defs><filter id="glow-filter"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-        <g stroke="rgba(0,210,230,.08)" fill="none" filter="url(#glow-filter)">
+        <g stroke="rgba(168,85,247,.08)" fill="none" filter="url(#glow-filter)">
           <line x1="400" y1="300" x2="50" y2="50"/><line x1="400" y1="300" x2="750" y2="50"/>
           <line x1="400" y1="300" x2="50" y2="550"/><line x1="400" y1="300" x2="750" y2="550"/>
-          <rect x="40" y="40" width="720" height="520" rx="9" stroke-dasharray="5,8" stroke="rgba(0,210,230,.05)"/>
+          <rect x="40" y="40" width="720" height="520" rx="9" stroke-dasharray="5,8" stroke="rgba(168,85,247,.05)"/>
         </g>
-        <g stroke="rgba(0,210,230,.06)" fill="none"><ellipse cx="400" cy="300" rx="160" ry="100"/></g>
-        <g font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(0,210,230,.16)" letter-spacing="1.5">
+        <g stroke="rgba(168,85,247,.06)" fill="none"><ellipse cx="400" cy="300" rx="160" ry="100"/></g>
+        <g font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(168,85,247,.16)" letter-spacing="1.5">
           <text x="56" y="34">ACRYLIC 45°</text><text x="630" y="34">ACRYLIC 45°</text>
           <text x="56" y="570">ACRYLIC 45°</text><text x="610" y="570">ACRYLIC 45°</text>
         </g>
-        <text x="340" y="304" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(0,210,230,.11)" letter-spacing="2">PEPPER'S GHOST</text>
+        <text x="340" y="304" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(168,85,247,.11)" letter-spacing="2">PEPPER'S GHOST</text>
       </svg>
     </div>
     <div id="welcome">
       <div id="welcome-orb-wrap">
         <div id="welcome-orb"><canvas id="orb-canvas"></canvas></div>
       </div>
-      <div class="wt">◈ KARLCON · BIM HOLOGRAM RENDERER v16.0<br><span style="color:rgba(0,240,180,.09)">PEPPER'S GHOST · NanoMorph Edition · GE-v16 · 1€Filter · TempScale · BoneVec · IEEE IFC ISO 16739 · BS8110</span><br><br>Load pipeline JSON to generate<br>an interactive 3D BIM hologram model</div>
+      <div class="wt">◈ KARLCON · BIM HOLOGRAM RENDERER v16.0<br><span style="color:rgba(0,240,180,0.55)">PEPPER'S GHOST · NanoMorph Edition · GE-v16 · 1€Filter · TempScale · BoneVec · IEEE IFC ISO 16739 · BS8110</span><br><br>Load pipeline JSON to generate<br>an interactive 3D BIM hologram model</div>
       <div class="wbig">◈ AWAITING PIPELINE INPUT ◈</div>
     </div>
     <!-- CALIBRATION OVERLAY -->
@@ -1593,12 +1574,12 @@ body::before{
         <div style="font-size:10px;letter-spacing:3px;color:rgba(212,170,60,.8);margin-bottom:16px">◈ GESTURE CALIBRATION — SELF-SUPERVISED PROTOTYPE INIT</div>
         <div id="calib-gesture-emoji" style="font-size:64px;margin-bottom:12px;transition:all .3s">✋</div>
         <div id="calib-gesture-name" style="font-size:14px;font-weight:600;color:var(--c);letter-spacing:2px;margin-bottom:6px">OPEN PALM</div>
-        <div id="calib-instruction" style="font-size:10px;color:rgba(0,210,230,.55);letter-spacing:.8px;margin-bottom:18px">Hold gesture in view of webcam</div>
+        <div id="calib-instruction" style="font-size:10px;color:rgba(168,85,247,.55);letter-spacing:.8px;margin-bottom:18px">Hold gesture in view of webcam</div>
         <div style="background:rgba(0,0,0,.4);border-radius:var(--rpill);height:4px;width:280px;margin:0 auto 12px;overflow:hidden">
           <div id="calib-progress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--c2),var(--c));border-radius:var(--rpill);transition:width .2s;box-shadow:0 0 6px var(--c)"></div>
         </div>
-        <div id="calib-timer" style="font-size:28px;font-weight:600;color:var(--c);letter-spacing:4px;text-shadow:0 0 18px rgba(0,210,230,.6)">10</div>
-        <div style="margin-top:10px;font-size:8.5px;color:rgba(0,210,230,.26);letter-spacing:1.2px">Ref: Uboweja ICCVW 2023 · Self-supervised prototype init · §4.3 KARLCON GE Spec</div>
+        <div id="calib-timer" style="font-size:28px;font-weight:600;color:var(--c);letter-spacing:4px;text-shadow:0 0 18px rgba(168,85,247,.6)">10</div>
+        <div style="margin-top:10px;font-size:8.5px;color:rgba(168,85,247,0.55);letter-spacing:1.2px">Ref: Uboweja ICCVW 2023 · Self-supervised prototype init · §4.3 KARLCON GE Spec</div>
         <button type="button" onclick="cancelCalibration()" style="margin-top:18px;background:transparent;border:1px solid rgba(240,68,96,.3);color:rgba(240,68,96,.6);font-family:var(--fm);font-size:9px;letter-spacing:1.5px;padding:5px 18px;border-radius:var(--r1);cursor:pointer;text-transform:uppercase">CANCEL</button>
       </div>
     </div>
@@ -1649,7 +1630,7 @@ body::before{
       <div class="panel-block-title" id="pb-ai-semantics"><span class="pbt-icon">◈</span> AI SEMANTICS</div>
       <div id="ai-semantics" class="dim-text">No pipeline ingested yet.<br>Connect WS and ingest JSON<br>to see live BIM semantics.</div>
       <div id="ai-confidence-wrap" style="display:none;margin-top:6px">
-        <div style="font-size:8px;color:rgba(0,210,230,.26);letter-spacing:1px;margin-bottom:2px">CONFIDENCE</div>
+        <div style="font-size:8px;color:rgba(168,85,247,0.55);letter-spacing:1px;margin-bottom:2px">CONFIDENCE</div>
         <div class="conf-bar-wrap"><div class="conf-bar" id="conf-bar" style="width:0%"></div></div>
         <div id="src-badge-wrap" style="margin-top:4px"></div>
       </div>
@@ -1668,13 +1649,13 @@ body::before{
     <div class="panel-block">
       <div class="panel-block-title" id="pb-ifc-topo"><span class="pbt-icon">≋</span> IFC STROKE TOPOLOGY</div>
       <div id="depth-info" class="dim-text">IFC wall topology<br>(BS8110 · ISO 16739)<br>Awaiting pipeline ingest…</div>
-      <div id="stroke-topology" style="font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.5);margin-top:5px;line-height:1.9;display:none"></div>
+      <div id="stroke-topology" style="font-family:var(--fm);font-size:8px;color:rgba(168,85,247,0.55);margin-top:5px;line-height:1.9;display:none"></div>
     </div>
 
     <div class="panel-block">
       <div class="panel-block-title"><span class="pbt-icon">⊕</span> PIPELINE METADATA</div>
       <div id="img-analysis" class="dim-text">Awaiting input…</div>
-      <div id="pipeline-meta" style="font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.5);margin-top:5px;line-height:1.9;display:none"></div>
+      <div id="pipeline-meta" style="font-family:var(--fm);font-size:8px;color:rgba(168,85,247,0.55);margin-top:5px;line-height:1.9;display:none"></div>
     </div>
 
     <div class="panel-block">
@@ -1689,7 +1670,7 @@ body::before{
     <div class="panel-block">
       <div class="panel-block-title"><span class="pbt-icon">◇</span> IFC PROPERTY SET</div>
       <div id="latent-info" class="dim-text">ISO 16739 · BS8110<br>IFC property sets populated<br>after pipeline ingest</div>
-      <div id="latent-keys" style="font-family:var(--fm);font-size:8px;color:rgba(0,210,230,.45);margin-top:4px;line-height:1.8"></div>
+      <div id="latent-keys" style="font-family:var(--fm);font-size:8px;color:rgba(168,85,247,0.55);margin-top:4px;line-height:1.8"></div>
     </div>
 
     <div class="panel-block">
@@ -1698,7 +1679,7 @@ body::before{
         MediaPipe HandLandmarker WASM<br>
         192-dim · MHA-Attention v16.0 · T=16 ring buffer<br>
         1€ Filter · TempScale T=1.8 · BoneVec · WipeDetector<br>
-        <span style="font-size:7.5px;color:rgba(212,170,60,.45)">DSLNet arXiv:2509.08661 · Liu IEEE-TM 2023 · Patrick 2021 · Uboweja 2023</span>
+        <span style="font-size:7.5px;color:rgba(212,170,60,0.55)">DSLNet arXiv:2509.08661 · Liu IEEE-TM 2023 · Patrick 2021 · Uboweja 2023</span>
       </div>
       <div style="margin-top:8px">
         <div class="toggle-row"><span>Show Gesture Overlay</span><div class="toggle" id="t-pip" onclick="togglePiP(this)"></div></div>
@@ -1726,32 +1707,32 @@ body::before{
 
     <div class="panel-block">
       <div class="panel-block-title"><span class="pbt-icon">◉</span> NANO METAMORPHOSIS</div>
-      <div class="dim-text" style="color:rgba(0,240,180,.38)">
+      <div class="dim-text" style="color:rgba(0,240,180,0.55)">
         NanoPixel Metamorphosis Theorem<br>
         Langevin nanoparticle diffusion<br>
         Solid → Dissolved → BIM transition<br>
-        <span style="color:rgba(0,240,180,.22)">Bhattacharya 2016 · Penrose-Hameroff</span>
+        <span style="color:rgba(0,240,180,0.55)">Bhattacharya 2016 · Penrose-Hameroff</span>
       </div>
       <div class="ctrl-row" style="margin-top:8px">
-        <label style="color:rgba(0,240,180,.5)">N Particles</label>
+        <label style="color:rgba(0,240,180,0.55)">N Particles</label>
         <input type="range" id="sl-nano-n" min="200" max="2000" value="800" step="100"
           oninput="NanoMorph.setN(+this.value);document.getElementById('v-nano-n').textContent=this.value"/>
         <span class="val" id="v-nano-n" style="color:rgba(0,240,180,.6)">800</span>
       </div>
       <div class="ctrl-row">
-        <label style="color:rgba(0,240,180,.5)">Diffusion σ</label>
+        <label style="color:rgba(0,240,180,0.55)">Diffusion σ</label>
         <input type="range" id="sl-nano-diff" min="0.001" max="0.08" value="0.018" step="0.001"
           oninput="NanoMorph.setDiff(+this.value);document.getElementById('v-nano-diff').textContent=(+this.value).toFixed(3)"/>
         <span class="val" id="v-nano-diff" style="color:rgba(0,240,180,.6)">0.018</span>
       </div>
       <div class="ctrl-row">
-        <label style="color:rgba(0,240,180,.5)">Morph Speed</label>
+        <label style="color:rgba(0,240,180,0.55)">Morph Speed</label>
         <input type="range" id="sl-nano-spd" min="0.5" max="8" value="2.2" step="0.1"
           oninput="NanoMorph.setSpeed(+this.value);document.getElementById('v-nano-spd').textContent=(+this.value).toFixed(1)"/>
         <span class="val" id="v-nano-spd" style="color:rgba(0,240,180,.6)">2.2</span>
       </div>
       <div class="ctrl-row">
-        <label style="color:rgba(0,240,180,.5)">Coulomb k</label>
+        <label style="color:rgba(0,240,180,0.55)">Coulomb k</label>
         <input type="range" id="sl-nano-coulomb" min="0" max="2" value="0.4" step="0.05"
           oninput="NanoMorph.setCoulomb(+this.value);document.getElementById('v-nano-coulomb').textContent=(+this.value).toFixed(2)"/>
         <span class="val" id="v-nano-coulomb" style="color:rgba(0,240,180,.6)">0.40</span>
@@ -2391,7 +2372,7 @@ function toggleFanMode(){
     renderer.setClearColor(0x000000, 1);
     renderer.setScissorTest(true);
     scene.fog = null;
-    if(btn){ btn.textContent='◈ FAN ON'; btn.style.borderColor='#0fd8ec'; btn.style.color='#0fd8ec'; }
+    if(btn){ btn.textContent='◈ FAN ON'; btn.style.borderColor='#a855f7'; btn.style.color='#a855f7'; }
     addLog('ok','Fan mode ON — pyramid display active');
     syncFanCameras();
   } else {
@@ -2443,14 +2424,14 @@ let latentKeys = [];
       if(s.y<0) s.y=1; if(s.y>1) s.y=0;
       ctx.beginPath();
       ctx.arc(s.x*cv.width, s.y*cv.height, 0.8, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(0,210,230,0.4)'; ctx.fill();
+      ctx.fillStyle = 'rgba(168,85,247,0.4)'; ctx.fill();
     });
     stars.forEach((a,i) => stars.slice(i+1).forEach(b => {
       const dx=(a.x-b.x)*cv.width, dy=(a.y-b.y)*cv.height;
       const d=Math.sqrt(dx*dx+dy*dy);
       if(d<120){ ctx.beginPath(); ctx.moveTo(a.x*cv.width,a.y*cv.height);
         ctx.lineTo(b.x*cv.width,b.y*cv.height);
-        ctx.strokeStyle=`rgba(0,210,230,${0.06*(1-d/120)})`; ctx.lineWidth=0.5; ctx.stroke(); }
+        ctx.strokeStyle=`rgba(168,85,247,${0.06*(1-d/120)})`; ctx.lineWidth=0.5; ctx.stroke(); }
     }));
     requestAnimationFrame(draw);
   }
@@ -3091,6 +3072,23 @@ const MeshyPipeline = (() => {
     return runTextTo3D(prompt, 'realistic', btn, 'sync');
   }
 
+  // ── Route GLB downloads through our own server-side proxy ────────────
+  // assets.meshy.ai does not send Access-Control-Allow-Origin, so the
+  // browser blocks GLTFLoader.load() from fetching it directly (confirmed
+  // in Meshy's own docs: docs.meshy.ai/en/api/errors — "Consider using a
+  // server-side proxy for such requests"). /api/meshy-proxy is a Vercel
+  // serverless function (deployed alongside this app) that fetches the
+  // asset server-to-server (no CORS applies there) and re-serves it from
+  // our own origin, which the browser is always allowed to load.
+  //
+  // Override window.MESHY_PROXY_BASE before this script runs if the proxy
+  // is hosted somewhere other than the current origin, e.g.:
+  //   <scr` + `ipt>window.MESHY_PROXY_BASE = 'https://karl-con-bim.vercel.app';<\/script>
+  function proxiedAssetUrl(rawUrl) {
+    const base = (window.MESHY_PROXY_BASE || '').replace(/\/$/, '');
+    return `${base}/api/meshy-proxy?url=${encodeURIComponent(rawUrl)}`;
+  }
+
   // ── Load the resulting GLB into the existing Three.js scene ──────────
   // Parented under window.meshyGroup so the animate() render loop applies
   // the SAME gesture-driven rotation/scale it already applies to bimGroup.
@@ -3102,7 +3100,7 @@ const MeshyPipeline = (() => {
       }
       const loader = new THREE.GLTFLoader();
       loader.load(
-        glbUrl,
+        proxiedAssetUrl(glbUrl),
         (gltf) => {
           // Remove any previously loaded Meshy model before adding the new one
           if (window.meshyGroup) { scene.remove(window.meshyGroup); window.meshyGroup = null; }
@@ -3323,7 +3321,7 @@ function _syncUpdateUI(state, detail) {
   const meta = document.getElementById('sync-status-meta');
   if (!icon) return;
   const map = {
-    idle:    { i:'◈',  c:'rgba(0,210,230,.4)',  t:'REST polling · 500ms'        },
+    idle:    { i:'◈',  c:'rgba(168,85,247,.4)',  t:'REST polling · 500ms'        },
     polling: { i:'⟳',  c:'rgba(212,170,60,.7)', t:'Polling /model/pipeline…'   },
     synced:  { i:'✓',  c:'rgba(80,210,130,.9)', t:'REST synced'                 },
     err:     { i:'✗',  c:'rgba(220,60,60,.8)',  t:'Poll error — retrying'       },
@@ -4290,7 +4288,7 @@ const OrbCanvas = (() => {
     const ringA = 0.055 + 0.025 * Math.sin(t * 0.9);
     ctx.beginPath();
     ctx.ellipse(CX, CY, 65, 12 + 3 * Math.sin(t * 0.45), 0, 0, 6.2832);
-    ctx.strokeStyle = `rgba(0,210,230,${ringA.toFixed(3)})`;
+    ctx.strokeStyle = `rgba(168,85,247,${ringA.toFixed(3)})`;
     ctx.lineWidth = 0.6;
     ctx.stroke();
 
@@ -5478,8 +5476,8 @@ const WipeFlash = (() => {
   const TOTAL = 24;
 
   const DIRS = {
-    WIPE_LEFT:  { lx:-1, ly: 0, label:'◂  WIPE LEFT',  θ: Math.PI,    col:'#0fd8ec' },
-    WIPE_RIGHT: { lx: 1, ly: 0, label:'WIPE RIGHT  ▸', θ: 0,          col:'#00f0d4' },
+    WIPE_LEFT:  { lx:-1, ly: 0, label:'◂  WIPE LEFT',  θ: Math.PI,    col:'#a855f7' },
+    WIPE_RIGHT: { lx: 1, ly: 0, label:'WIPE RIGHT  ▸', θ: 0,          col:'#e879f9' },
     WIPE_UP:    { lx: 0, ly:-1, label:'▴  WIPE UP',    θ:-Math.PI/2,  col:'#d4aa3c' },
     WIPE_DOWN:  { lx: 0, ly: 1, label:'▾  WIPE DOWN',  θ: Math.PI/2,  col:'#e87a44' },
   };
@@ -7254,7 +7252,7 @@ window.addEventListener('pagehide', () => {
   <div class="mob-status-strip">
     <div id="mob-ws-dot2" style="width:7px;height:7px;border-radius:50%;background:var(--ws-off);flex-shrink:0"></div>
     <span id="mob-ws-text2">WS OFFLINE</span>
-    <button type="button" onclick="connectWS()" style="margin-left:auto;background:rgba(0,210,230,.08);border:1px solid rgba(0,210,230,.25);border-radius:var(--rpill);color:var(--c);font-family:var(--fm);font-size:9px;letter-spacing:1px;padding:4px 12px;cursor:pointer">CONNECT</button>
+    <button type="button" onclick="connectWS()" style="margin-left:auto;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:var(--rpill);color:var(--c);font-family:var(--fm);font-size:9px;letter-spacing:1px;padding:4px 12px;cursor:pointer">CONNECT</button>
   </div>
   <div class="panel-block">
     <div class="panel-block-title"><span class="pbt-icon">◉</span> HOLO PROJECTOR</div>
@@ -7316,7 +7314,7 @@ window.addEventListener('pagehide', () => {
 <div class="mob-drawer" id="mob-draw-actions">
   <div class="mob-quick-row">
     <button class="mob-quick-btn primary" onclick="triggerBIM()">⬡ GENERATE BIM</button>
-    <button class="mob-quick-btn" onclick="triggerNanoMorph()" style="border-color:rgba(0,240,180,.3);color:rgba(0,240,180,.7)">⬡ NANOMORPH</button>
+    <button class="mob-quick-btn" onclick="triggerNanoMorph()" style="border-color:rgba(0,240,180,0.55);color:rgba(0,240,180,.7)">⬡ NANOMORPH</button>
     <button class="mob-quick-btn" id="mob-gesture-btn" onclick="toggleGestureEngine();updateMobGestureBtn()">◈ GESTURE OFF</button>
     <button class="mob-quick-btn" onclick="exportView()">↯ EXPORT PNG</button>
     <button class="mob-quick-btn" onclick="resetScene()">↺ RESET SCENE</button>
@@ -7334,10 +7332,10 @@ window.addEventListener('pagehide', () => {
 <div class="mob-drawer" id="mob-draw-log">
   <div class="mob-status-strip">
     <span style="color:var(--c)">▤</span> EVENT LOG
-    <span id="mob-log-count" style="margin-left:auto;color:rgba(0,210,230,.3)">0 entries</span>
+    <span id="mob-log-count" style="margin-left:auto;color:rgba(168,85,247,0.55)">0 entries</span>
   </div>
-  <div id="mob-anno-log" style="font-family:var(--fm);font-size:9px;color:rgba(0,210,230,.36);line-height:2;letter-spacing:.4px;min-height:120px">
-    <div style="color:rgba(0,210,230,.2)">Syncing log…</div>
+  <div id="mob-anno-log" style="font-family:var(--fm);font-size:9px;color:rgba(168,85,247,0.55);line-height:2;letter-spacing:.4px;min-height:120px">
+    <div style="color:rgba(168,85,247,0.55)">Syncing log…</div>
   </div>
 </div>
 
@@ -7681,23 +7679,25 @@ window.iconScrollTo = function(el, side) {
     _statusEl = document.createElement('div');
     _statusEl.id = 'karlcon-relay-status';
     _statusEl.style.cssText = [
-      'position:fixed', 'top:8px', 'right:8px', 'z-index:99999',
-      'font-family:monospace', 'font-size:11px', 'padding:4px 9px',
-      'border-radius:4px', 'background:rgba(13,15,18,0.85)',
-      'border:1px solid #00d4c8', 'color:#00d4c8',
-      'pointer-events:none', 'letter-spacing:0.5px',
-      'transition:color 0.2s,border-color 0.2s'
+      'position:fixed', 'top:12px', 'right:12px', 'z-index:99999',
+      'width:10px', 'height:10px', 'border-radius:50%',
+      'background:#ff4d4d',
+      'box-shadow:0 0 8px 2px rgba(255,77,77,0.8)',
+      'pointer-events:none',
+      'transition:background 0.2s,box-shadow 0.2s'
     ].join(';');
-    _statusEl.textContent = 'PUSHER: CHECKING…';
+    _statusEl.title = 'PUSHER: CHECKING…';
     document.body.appendChild(_statusEl);
     return _statusEl;
   }
 
   function setStatus(text, ok) {
     var el = ensureStatusEl();
-    el.textContent = text;
-    el.style.borderColor = ok ? '#00ffae' : '#ff4d4d';
-    el.style.color = ok ? '#00ffae' : '#ff4d4d';
+    // Dot only, no letters — text still goes in the tooltip for debugging.
+    el.title = text;
+    var color = ok ? '#00ffae' : '#ff4d4d';
+    el.style.background = color;
+    el.style.boxShadow = '0 0 8px 2px ' + color;
   }
 
   // Two-way channel, not just a read-only poll:
